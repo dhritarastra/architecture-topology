@@ -1,0 +1,9 @@
+[
+  {
+    "id": "DB",
+    "label": "DB",
+    "type": "rds",
+    "schema": {}
+  }
+]
+

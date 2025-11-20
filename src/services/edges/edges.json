@@ -1,0 +1,8 @@
+[
+  { "id": "e1", "source": "SU-CRON", "target": "SQS_FIFO", "label": "pushes" },
+  { "id": "e2", "source": "SQS_FIFO", "target": "LPS", "label": "triggers" },
+  { "id": "e3", "source": "LPS", "target": "DB", "label": "writes", "dir": "forward" },
+  { "id": "e4", "source": "DB", "target": "LPS", "label": "reads", "dir": "backward" },
+  { "id": "e5", "source": "SU-CRON", "target": "LPS", "label": "polls", "dir": "backward" }
+]
+

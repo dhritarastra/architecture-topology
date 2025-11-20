@@ -1,0 +1,15 @@
+[
+  {
+    "id": "SQS_FIFO",
+    "repo": "status-update-cron",
+    "label": "SQS FIFO",
+    "type": "sqs",
+    "schema": {
+      "message": {
+        "id": "string",
+        "payload": { "foo": "string" }
+      }
+    }
+  }
+]
+

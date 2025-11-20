@@ -1,0 +1,30 @@
+[
+  {
+    "id": "SU-CRON",
+    "label": "SU-CRON",
+    "repo": "molb-status-update-job",
+    "type": "ecs",
+    "schema": {
+      "request": {
+        "id": "string",
+        "timestamp": "string"
+      },
+      "response": {
+        "status": "string"
+      }
+    }
+  },
+  {
+    "id": "LPS",
+    "label": "LPS",
+    "repo": "molb-licence-service",
+    "type": "ecs",
+    "schema": {
+      "entity": {
+        "id": "string",
+        "state": "string"
+      }
+    }
+  }
+]
+
