@@ -1,19 +1,21 @@
-import {useState, useRef, useEffect, useMemo} from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import CytoscapeComponent from "react-cytoscapejs";
 import cytoscape from "cytoscape";
 import dagre from "cytoscape-dagre";
 
 import { JsonView } from "react-json-view-lite";
 import "react-json-view-lite/dist/index.css";
-import "./App.css"
-// auto-import all node JSONs in src/services/nodes
+import "./App.css";
+
+// auto-import all JSON definitions
 const nodeModules = import.meta.glob("./services/nodes/*.json", { eager: true });
-// auto-import all edge JSONs in src/services/edges
 const edgeModules = import.meta.glob("./services/edges/*.json", { eager: true });
 
 cytoscape.use(dagre);
 
-// ----- stylesheet: arrows + non-overlapping edges -----
+/* -------------------------------------------------------
+   STYLESHEET — clean static edges with triangle arrows
+-------------------------------------------------------- */
 const stylesheet = [
     {
         selector: "node[label]",
@@ -28,14 +30,13 @@ const stylesheet = [
             "text-margin-y": 5,
             width: 85,
             height: 85,
-            shape: "round-rectangle",   // 👈 all non-DB nodes become rounded rectangles
+            shape: "round-rectangle",
         },
     },
-    // 👇 DB only override
     {
-        selector: "node[type = 'rds']",
+        selector: "node[type='rds']",
         style: {
-            shape: "ellipse",           // 👈 circle
+            shape: "ellipse",
             width: 70,
             height: 70,
             "background-opacity": 0,
@@ -43,23 +44,21 @@ const stylesheet = [
             "background-fit": "cover",
         },
     },
-    // AWS ECS
     {
-        selector: "node[type = 'ecs']",
+        selector: "node[type='ecs']",
         style: {
             "background-opacity": 0,
             "background-image": "url(/aws-icons/ECS.svg)",
             "background-fit": "cover",
-        }
+        },
     },
-    // Amazon SQS
     {
-        selector: "node[type = 'sqs']",
+        selector: "node[type='sqs']",
         style: {
             "background-opacity": 0,
             "background-image": "url(/aws-icons/SQS.svg)",
             "background-fit": "cover",
-        }
+        },
     },
     {
         selector: "edge",
@@ -71,90 +70,56 @@ const stylesheet = [
             "curve-style": "bezier",
             "control-point-step-size": 40,
 
-            // base label styling
             label: "data(label)",
             "font-size": 12,
             color: "#111827",
             "text-rotation": "autorotate",
-
-            // pill background so text is readable
             "text-background-color": "#f9fafb",
             "text-background-opacity": 1,
             "text-background-shape": "round-rectangle",
             "text-background-padding": 3,
         },
     },
-    // LPS → DB (writes) – bend up, label just above & centered-ish
     {
-        selector: "edge[dir = 'forward']",
+        selector: "edge[dir='forward']",
         style: {
-            "control-point-weight": 1,
             "line-color": "#3b82f6",
             "target-arrow-color": "#3b82f6",
-            "text-margin-y": -10, // above the edge
-            "text-margin-x": -12, // shift a bit left towards center
+            "text-margin-y": -10,
+            "text-margin-x": -12,
         },
     },
-    // DB → LPS (reads) – bend down, label just below & centered-ish
     {
-        selector: "edge[dir = 'backward']",
+        selector: "edge[dir='backward']",
         style: {
-            "control-point-weight": 0,
             "line-color": "#10b981",
             "target-arrow-color": "#10b981",
-            "text-margin-y": 10,  // below the edge
-            "text-margin-x": -12, // same x-shift so both align vertically
+            "text-margin-y": 10,
+            "text-margin-x": -12,
         },
     },
 ];
 
-// Animate edges with a "flowing" dashed effect
-function startEdgeDashAnimation(cy) {
-    // set dashed style once
-    cy.edges().forEach((edge) => {
-        edge.style("line-style", "dashed");
-        edge.style("line-dash-pattern", [10, 8]); // dash length / gap
-    });
-
-    let offset = 0;
-
-    // simple animation loop
-    setInterval(() => {
-        offset = (offset + 1) % 30;
-
-        cy.edges().forEach((edge) => {
-            // forward/backward edges can move in opposite directions if you like
-            const dir = edge.data("dir");
-            const sign =
-                dir === "backward"
-                    ? -1
-                    : 1; // backward edges "flow" the other way
-
-            edge.style("line-dash-offset", sign * offset);
-        });
-    }, 50); // 50ms for smooth animation
-}
-
-
+/* -------------------------------------------------------
+   MAIN COMPONENT
+-------------------------------------------------------- */
 export default function App() {
     const [elements, setElements] = useState([]);
     const [selectedNode, setSelectedNode] = useState(null);
     const cyRef = useRef(null);
-    const layoutWasApplied = useRef(false);
+    const layoutApplied = useRef(false);
 
+    /* ------------------------------------------
+       BUILD ELEMENTS FROM JSON FILES
+    ------------------------------------------- */
+    const graphElements = useMemo(() => {
+        const allNodes = Object.values(nodeModules).flatMap((mod) =>
+            Array.isArray(mod.default) ? mod.default : []
+        );
 
-    // Build graph elements
-    useEffect(() => {
-        // Combine all nodes from all JSON files
-        const allNodes = Object.values(nodeModules).flatMap((mod) => {
-            // each mod.default should be an array of nodes
-            return Array.isArray(mod.default) ? mod.default : [];
-        });
-
-        // Combine all edges from all JSON files
-        const allEdges = Object.values(edgeModules).flatMap((mod) => {
-            return Array.isArray(mod.default) ? mod.default : [];
-        });
+        const allEdges = Object.values(edgeModules).flatMap((mod) =>
+            Array.isArray(mod.default) ? mod.default : []
+        );
 
         const nodeElements = allNodes.map((n) => ({
             data: {
@@ -162,8 +127,8 @@ export default function App() {
                 repo: n.repo,
                 label: n.label,
                 type: n.type,
-                schema: n.schema
-            }
+                schema: n.schema,
+            },
         }));
 
         const edgeElements = allEdges.map((e) => ({
@@ -172,40 +137,45 @@ export default function App() {
                 source: e.source,
                 target: e.target,
                 label: e.label,
-                dir: e.dir
-            }
+                dir: e.dir,
+            },
         }));
 
-        setElements([...nodeElements, ...edgeElements]);
+        return [...nodeElements, ...edgeElements];
     }, []);
 
+    useEffect(() => {
+        setElements(graphElements);
+    }, [graphElements]);
 
-
-    // When graph loads, apply layout + events
-    const onCyInit = (cy) => {
+    /* ------------------------------------------
+       CY INIT — interactions only
+    ------------------------------------------- */
+    const onCyInit = useCallback((cy) => {
         cyRef.current = cy;
 
-        // interactions
         cy.zoomingEnabled(true);
         cy.panningEnabled(true);
         cy.userZoomingEnabled(true);
         cy.userPanningEnabled(true);
         cy.boxSelectionEnabled(true);
+
         cy.nodes().unlock();
         cy.nodes().grabify();
 
-        // click handler
         cy.on("tap", "node", (evt) => {
             const node = evt.target;
-            if (node.data("isFlowToken")) return;
             setSelectedNode(node.data());
         });
-    };
+    }, []);
 
+    /* ------------------------------------------
+       APPLY LAYOUT ONCE, AFTER ELEMENTS LOADED
+    ------------------------------------------- */
     useEffect(() => {
         if (!cyRef.current) return;
         if (!elements.length) return;
-        if (layoutWasApplied.current) return;
+        if (layoutApplied.current) return;
 
         const cy = cyRef.current;
 
@@ -218,59 +188,31 @@ export default function App() {
         });
 
         layout.run();
-
-        layout.on("layoutstop", () => {
-            startEdgeDashAnimation(cy);   // <<< 🔥 START ANIMATION HERE
-        });
-
-        layoutWasApplied.current = true;
+        layoutApplied.current = true;
 
         cy.fit();
     }, [elements]);
 
-
-
-
-    const cyElement = useMemo(() => {
-        return (
-            <CytoscapeComponent
-                elements={elements}
-                cy={onCyInit}
-                className="graph-canvas"
-                stylesheet={stylesheet}
-            />
-        );
-    }, [elements]);  // only rebuild when ELEMENTS change, not when selected node changes
-
-
+    /* ------------------------------------------ */
     return (
         <div className="app-container">
-        {/* Graph container */}
             <div className="graph-container">
-            <h3 style={{ padding: "10px" }}>GoBusiness System Topology</h3>
-                {cyElement}
+                <CytoscapeComponent
+                    elements={elements}
+                    style={{ width: "100%", height: "100%" }}
+                    cy={onCyInit}
+                    stylesheet={stylesheet}
+                />
             </div>
 
-            {/* Inspector Panel */}
-            <div className="inspector-container">
-                <h3>Inspector</h3>
-
-                {!selectedNode && <div>Select a node in the graph.</div>}
-
-                {selectedNode && (
-                    <>
-                        <button className="inspector-close-btn" onClick={() => setSelectedNode(null)}>
-                            Close
-                        </button>
-
-                        <h4>Service: {selectedNode.label}</h4>
-                        <h4>Repository: {selectedNode.repo}</h4>
-
-                        <JsonView
-                            data={selectedNode.schema || {}}
-                            style={{ background: "#fff", padding: "10px" }}
-                        />
-                    </>
+            <div className="details-panel">
+                {selectedNode ? (
+                    <div>
+                        <h2>Node Details</h2>
+                        <JsonView data={selectedNode.schema || {}} />
+                    </div>
+                ) : (
+                    <div>Select a node to inspect its schema.</div>
                 )}
             </div>
         </div>

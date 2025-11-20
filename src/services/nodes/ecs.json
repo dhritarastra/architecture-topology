@@ -25,6 +25,18 @@
         "state": "string"
       }
     }
+  },
+  {
+    "id": "LPA",
+    "label": "LPA",
+    "repo": "molb-licence-backend",
+    "type": "ecs",
+    "schema": {
+      "entity": {
+        "id": "string",
+        "state": "string"
+      }
+    }
   }
 ]
 
