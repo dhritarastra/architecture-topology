@@ -19,14 +19,14 @@ cytoscape.use(dagre);
 -------------------------------------------------------- */
 const API_FLOWS = Object.entries(flowModules)
     .map(([path, mod]) => {
-        const flow = mod.default ?? mod;  // some bundlers put JSON on default
+        const flow = mod.default ?? mod;
         console.log("Loaded flow module:", path, flow);
         return flow;
     })
     .filter((f) => f && f.id && f.label);
 
 /* -------------------------------------------------------
-   STYLESHEET (same as before)
+   STYLESHEET
 -------------------------------------------------------- */
 const stylesheet = [
     {
@@ -70,7 +70,7 @@ const stylesheet = [
             "background-opacity": 0,
             "background-image": "url(/aws-icons/SQS.svg)",
             "background-fit": "cover",
-        }
+        },
     },
     {
         selector: "edge",
@@ -136,14 +136,16 @@ export default function App() {
     const [selectedNode, setSelectedNode] = useState(null);
 
     const [viewMode, setViewMode] = useState("infra");
-
-    // default to first flow if exists
-    const [selectedFlowId, setSelectedFlowId] = useState(
-        API_FLOWS[0]?.id || null
-    );
+    const [selectedFlowId, setSelectedFlowId] = useState(API_FLOWS[0]?.id || null);
 
     const cyRef = useRef(null);
     const layoutApplied = useRef(false);
+
+    // 👇 new: resizable split state & refs
+    const [leftWidth, setLeftWidth] = useState(70); // percentage for graph panel
+    const isResizingRef = useRef(false);
+    const startXRef = useRef(0);
+    const startWidthRef = useRef(70);
 
     /* ------------------------------------------
        BUILD ELEMENTS FROM JSON FILES
@@ -210,6 +212,68 @@ export default function App() {
     }, [elements]);
 
     /* ------------------------------------------
+       RESIZE CYTOSCAPE WHEN LEFT PANEL CHANGES
+    ------------------------------------------- */
+    // RESIZE CYTOSCAPE WHEN LEFT PANEL CHANGES
+    useEffect(() => {
+        if (!cyRef.current) return;
+        const cy = cyRef.current;
+
+        // Wait for React to apply new widths, then resize Cytoscape
+        requestAnimationFrame(() => {
+            cy.resize();
+
+            // 👇 choose one behaviour:
+            // 1) If you want it to always auto-fit when you drag:
+            cy.fit();
+
+            // 2) If you want to keep manual zoom/pan, comment the line above
+            //    and only rely on `resize()`:
+            // cy.center();  // or nothing, just resize
+        });
+    }, [leftWidth]);
+
+
+    /* ------------------------------------------
+       MOUSE HANDLERS FOR RESIZE
+    ------------------------------------------- */
+    const handleMouseMove = useCallback((e) => {
+        if (!isResizingRef.current) return;
+        const dx = e.clientX - startXRef.current;
+        const deltaPercent = (dx / window.innerWidth) * 100;
+        let newWidth = startWidthRef.current + deltaPercent;
+        // clamp between 30% and 80%
+        newWidth = Math.max(30, Math.min(80, newWidth));
+        setLeftWidth(newWidth);
+    }, []);
+
+    const handleMouseUp = useCallback(() => {
+        if (!isResizingRef.current) return;
+        isResizingRef.current = false;
+        window.removeEventListener("mousemove", handleMouseMove);
+        window.removeEventListener("mouseup", handleMouseUp);
+    }, [handleMouseMove]);
+
+    const handleMouseDown = useCallback(
+        (e) => {
+            isResizingRef.current = true;
+            startXRef.current = e.clientX;
+            startWidthRef.current = leftWidth;
+            window.addEventListener("mousemove", handleMouseMove);
+            window.addEventListener("mouseup", handleMouseUp);
+        },
+        [leftWidth, handleMouseMove, handleMouseUp]
+    );
+
+    // cleanup on unmount
+    useEffect(() => {
+        return () => {
+            window.removeEventListener("mousemove", handleMouseMove);
+            window.removeEventListener("mouseup", handleMouseUp);
+        };
+    }, [handleMouseMove, handleMouseUp]);
+
+    /* ------------------------------------------
        APPLY FLOW HIGHLIGHTING FOR API MODE
     ------------------------------------------- */
     useEffect(() => {
@@ -240,7 +304,11 @@ export default function App() {
     /* ------------------------------------------ */
     return (
         <div className="app-container">
-            <div className="graph-container">
+            {/* LEFT: graph */}
+            <div
+                className="graph-container"
+                style={{ width: `${leftWidth}%` }}
+            >
                 <CytoscapeComponent
                     elements={elements}
                     style={{ width: "100%", height: "100%" }}
@@ -249,7 +317,17 @@ export default function App() {
                 />
             </div>
 
-            <div className="details-panel">
+            {/* RESIZER BAR */}
+            <div
+                className="vertical-resizer"
+                onMouseDown={handleMouseDown}
+            />
+
+            {/* RIGHT: details */}
+            <div
+                className="details-panel"
+                style={{ width: `${100 - leftWidth}%` }}
+            >
                 {/* View mode toggle */}
                 <div style={{ marginBottom: 12 }}>
                     <strong>View:</strong>{" "}

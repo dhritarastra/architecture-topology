@@ -32,3 +32,34 @@
 .inspector-close-btn {
   margin-bottom: 10px;
 }
+
+.app-container {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Left pane */
+.graph-container {
+  position: relative;
+  height: 100%;
+  /* width is set inline via style={{ width: `${leftWidth}%` }} */
+}
+
+/* Draggable divider between graph and details */
+.vertical-resizer {
+  width: 5px;
+  cursor: col-resize;
+  background-color: #e5e7eb; /* tailwind gray-200-ish */
+  flex-shrink: 0;
+}
+
+/* Right pane */
+.details-panel {
+  height: 100%;
+  overflow: auto;
+  padding: 12px;
+  box-sizing: border-box;
+  background-color: #f9fafb;
+  border-left: 1px solid #e5e7eb;
+}
