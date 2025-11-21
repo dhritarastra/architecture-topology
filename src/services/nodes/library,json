@@ -1,0 +1,18 @@
+[
+  {
+    "id": "SU-CRON",
+    "label": "SU-CRON",
+    "repo": "molb-status-update-job",
+    "type": "ecs",
+    "schema": {
+      "request": {
+        "id": "string",
+        "timestamp": "string"
+      },
+      "response": {
+        "status": "string"
+      }
+    }
+  }
+]
+

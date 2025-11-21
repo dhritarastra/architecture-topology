@@ -204,7 +204,7 @@ export default function App() {
             rankDir: "LR",
             nodeSep: 50,
             rankSep: 70,
-            edgeSep: 20,
+            edgeSep: 200,
         }).run();
 
         layoutApplied.current = true;
