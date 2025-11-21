@@ -211,28 +211,6 @@ export default function App() {
         cy.fit();
     }, [elements]);
 
-    /* ------------------------------------------
-       RESIZE CYTOSCAPE WHEN LEFT PANEL CHANGES
-    ------------------------------------------- */
-    // RESIZE CYTOSCAPE WHEN LEFT PANEL CHANGES
-    useEffect(() => {
-        if (!cyRef.current) return;
-        const cy = cyRef.current;
-
-        // Wait for React to apply new widths, then resize Cytoscape
-        requestAnimationFrame(() => {
-            cy.resize();
-
-            // 👇 choose one behaviour:
-            // 1) If you want it to always auto-fit when you drag:
-            cy.fit();
-
-            // 2) If you want to keep manual zoom/pan, comment the line above
-            //    and only rely on `resize()`:
-            // cy.center();  // or nothing, just resize
-        });
-    }, [leftWidth]);
-
 
     /* ------------------------------------------
        MOUSE HANDLERS FOR RESIZE
@@ -242,9 +220,8 @@ export default function App() {
         const dx = e.clientX - startXRef.current;
         const deltaPercent = (dx / window.innerWidth) * 100;
         let newWidth = startWidthRef.current + deltaPercent;
-        // clamp between 30% and 80%
-        newWidth = Math.max(30, Math.min(80, newWidth));
-        setLeftWidth(newWidth);
+        newWidth = Math.max(30, Math.min(80, newWidth)); // clamp
+        setLeftWidth(newWidth); // 👈 DOM only, no cy.resize() here
     }, []);
 
     const handleMouseUp = useCallback(() => {
@@ -252,6 +229,16 @@ export default function App() {
         isResizingRef.current = false;
         window.removeEventListener("mousemove", handleMouseMove);
         window.removeEventListener("mouseup", handleMouseUp);
+
+        // 👇 Only now, after user stops dragging, tell Cytoscape to resize
+        if (cyRef.current) {
+            const cy = cyRef.current;
+            requestAnimationFrame(() => {
+                cy.resize();
+                // Optional: only if you want it to re-center after drag
+                cy.fit();
+            });
+        }
     }, [handleMouseMove]);
 
     const handleMouseDown = useCallback(
@@ -264,6 +251,7 @@ export default function App() {
         },
         [leftWidth, handleMouseMove, handleMouseUp]
     );
+
 
     // cleanup on unmount
     useEffect(() => {
