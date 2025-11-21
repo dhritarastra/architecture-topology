@@ -1,8 +1,8 @@
 [
   {
-    "id": "SU-CRON",
-    "label": "SU-CRON",
-    "repo": "molb-status-update-job",
+    "id": "GCC-INFRA",
+    "label": "GCC-INFRA",
+    "repo": "molb-gcc-infra",
     "type": "ecs",
     "schema": {
       "request": {

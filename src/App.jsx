@@ -228,7 +228,7 @@ export default function App() {
         if (!isResizingRef.current) return;
         isResizingRef.current = false;
         window.removeEventListener("mousemove", handleMouseMove);
-        window.removeEventListener("mouseup", handleMouseUp);
+        // window.removeEventListener("mouseup", handleMouseUp);
 
         // 👇 Only now, after user stops dragging, tell Cytoscape to resize
         if (cyRef.current) {
@@ -288,6 +288,29 @@ export default function App() {
         nodesInFlow.removeClass("dimmed").addClass("highlighted-flow");
         edgesInFlow.removeClass("dimmed").addClass("highlighted-flow");
     }, [viewMode, selectedFlowId, elements]);
+
+    // Find active flow (for API mode)
+    const activeFlow = useMemo(() => {
+        if (viewMode !== "api" || !selectedFlowId) return null;
+        return API_FLOWS.find((f) => f.id === selectedFlowId) || null;
+    }, [viewMode, selectedFlowId]);
+
+    // Decide which schema to show for the selected node
+    const getSchemaForSelectedNode = (nodeData) => {
+        if (!nodeData) return {};
+
+        // If we're in API mode and this flow defines a schema for this node, use it
+        if (viewMode === "api" && activeFlow && activeFlow.nodeSchemas) {
+            const flowSchema = activeFlow.nodeSchemas[nodeData.id];
+            if (flowSchema) {
+                return flowSchema;
+            }
+        }
+
+        // Fallback: base infra schema from node definition
+        return nodeData.schema || {};
+    };
+
 
     /* ------------------------------------------ */
     return (
@@ -371,7 +394,7 @@ export default function App() {
                 {selectedNode ? (
                     <div>
                         <h2>Node Details</h2>
-                        <JsonView data={selectedNode.schema || {}} />
+                        <JsonView data={getSchemaForSelectedNode(selectedNode)} />
                     </div>
                 ) : (
                     <div>Select a node to inspect its schema.</div>
