@@ -10,31 +10,23 @@ import "./App.css";
 // auto-import all JSON definitions
 const nodeModules = import.meta.glob("./services/nodes/*.json", { eager: true });
 const edgeModules = import.meta.glob("./services/edges/*.json", { eager: true });
+const flowModules = import.meta.glob("./services/flows/*.json", { eager: true });
 
 cytoscape.use(dagre);
 
 /* -------------------------------------------------------
-   EXAMPLE API FLOWS (multi-layer)
-   You can change / extend this as you like.
+   LOAD API FLOWS dynamically
 -------------------------------------------------------- */
-const API_FLOWS = [
-    {
-        id: "su-cron-full-path",
-        label: "SU-CRON → SQS → LPS → DB (write)",
-        nodes: ["SU-CRON", "SQS_FIFO", "LPS", "DB"],
-        edges: ["e1", "e2", "e3"],
-    },
-    {
-        id: "db-to-lps-read",
-        label: "DB → LPS (read)",
-        nodes: ["DB", "LPS"],
-        edges: ["e4"],
-    },
-];
+const API_FLOWS = Object.entries(flowModules)
+    .map(([path, mod]) => {
+        const flow = mod.default ?? mod;  // some bundlers put JSON on default
+        console.log("Loaded flow module:", path, flow);
+        return flow;
+    })
+    .filter((f) => f && f.id && f.label);
 
 /* -------------------------------------------------------
-   STYLESHEET — clean static edges with triangle arrows
-   + classes for dimming / highlighting flows
+   STYLESHEET (same as before)
 -------------------------------------------------------- */
 const stylesheet = [
     {
@@ -78,7 +70,7 @@ const stylesheet = [
             "background-opacity": 0,
             "background-image": "url(/aws-icons/SQS.svg)",
             "background-fit": "cover",
-        },
+        }
     },
     {
         selector: "edge",
@@ -89,7 +81,6 @@ const stylesheet = [
             "target-arrow-shape": "triangle",
             "curve-style": "bezier",
             "control-point-step-size": 40,
-
             label: "data(label)",
             "font-size": 12,
             color: "#111827",
@@ -118,7 +109,6 @@ const stylesheet = [
             "text-margin-x": -12,
         },
     },
-    // Dimmed elements (when not in selected API flow)
     {
         selector: ".dimmed",
         style: {
@@ -127,7 +117,6 @@ const stylesheet = [
             "line-style": "dashed",
         },
     },
-    // Highlighted elements (in selected API flow)
     {
         selector: ".highlighted-flow",
         style: {
@@ -146,9 +135,12 @@ export default function App() {
     const [elements, setElements] = useState([]);
     const [selectedNode, setSelectedNode] = useState(null);
 
-    // viewMode: "infra" | "api"
     const [viewMode, setViewMode] = useState("infra");
-    const [selectedFlowId, setSelectedFlowId] = useState(API_FLOWS[0]?.id || null);
+
+    // default to first flow if exists
+    const [selectedFlowId, setSelectedFlowId] = useState(
+        API_FLOWS[0]?.id || null
+    );
 
     const cyRef = useRef(null);
     const layoutApplied = useRef(false);
@@ -165,27 +157,15 @@ export default function App() {
             Array.isArray(mod.default) ? mod.default : []
         );
 
-        const nodeElements = allNodes.map((n) => ({
-            data: {
-                id: n.id,
-                repo: n.repo,
-                label: n.label,
-                type: n.type,
-                schema: n.schema,
-            },
+        const nodes = allNodes.map((n) => ({
+            data: { ...n },
         }));
 
-        const edgeElements = allEdges.map((e) => ({
-            data: {
-                id: e.id,
-                source: e.source,
-                target: e.target,
-                label: e.label,
-                dir: e.dir,
-            },
+        const edges = allEdges.map((e) => ({
+            data: { ...e },
         }));
 
-        return [...nodeElements, ...edgeElements];
+        return [...nodes, ...edges];
     }, []);
 
     useEffect(() => {
@@ -193,82 +173,66 @@ export default function App() {
     }, [graphElements]);
 
     /* ------------------------------------------
-       CY INIT — interactions only
+       CY INIT
     ------------------------------------------- */
     const onCyInit = useCallback((cy) => {
         cyRef.current = cy;
-
         cy.zoomingEnabled(true);
         cy.panningEnabled(true);
         cy.userZoomingEnabled(true);
         cy.userPanningEnabled(true);
         cy.boxSelectionEnabled(true);
-
         cy.nodes().unlock();
         cy.nodes().grabify();
 
         cy.on("tap", "node", (evt) => {
-            const node = evt.target;
-            setSelectedNode(node.data());
+            setSelectedNode(evt.target.data());
         });
     }, []);
 
     /* ------------------------------------------
-       APPLY LAYOUT ONCE, AFTER ELEMENTS LOADED
+       APPLY DAGRE LAYOUT ONCE
     ------------------------------------------- */
     useEffect(() => {
-        if (!cyRef.current) return;
-        if (!elements.length) return;
-        if (layoutApplied.current) return;
+        if (!cyRef.current || !elements.length || layoutApplied.current) return;
 
         const cy = cyRef.current;
-
-        const layout = cy.layout({
+        cy.layout({
             name: "dagre",
             rankDir: "LR",
             nodeSep: 50,
             rankSep: 70,
             edgeSep: 20,
-        });
+        }).run();
 
-        layout.run();
         layoutApplied.current = true;
-
         cy.fit();
     }, [elements]);
 
     /* ------------------------------------------
-       APPLY FLOW HIGHLIGHTING FOR API VIEW
+       APPLY FLOW HIGHLIGHTING FOR API MODE
     ------------------------------------------- */
     useEffect(() => {
         const cy = cyRef.current;
         if (!cy) return;
 
-        // Clear previous classes
-        cy.elements().removeClass("dimmed");
-        cy.elements().removeClass("highlighted-flow");
-
-        if (viewMode !== "api" || !selectedFlowId) {
-            // Infra view ⇒ everything normal
-            return;
-        }
+        cy.elements().removeClass("dimmed highlighted-flow");
+        if (viewMode !== "api" || !selectedFlowId) return;
 
         const flow = API_FLOWS.find((f) => f.id === selectedFlowId);
         if (!flow) return;
 
-        const { nodes: nodeIds = [], edges: edgeIds = [] } = flow;
+        const { nodes = [], edges = [] } = flow;
 
         const allNodes = cy.nodes();
         const allEdges = cy.edges();
 
-        const nodesInFlow = allNodes.filter((n) => nodeIds.includes(n.id()));
-        const edgesInFlow = allEdges.filter((e) => edgeIds.includes(e.id()));
+        const nodesInFlow = allNodes.filter((n) => nodes.includes(n.id()));
+        const edgesInFlow = allEdges.filter((e) => edges.includes(e.id()));
 
-        // Dim everything
         allNodes.addClass("dimmed");
         allEdges.addClass("dimmed");
 
-        // Undim + highlight flow
         nodesInFlow.removeClass("dimmed").addClass("highlighted-flow");
         edgesInFlow.removeClass("dimmed").addClass("highlighted-flow");
     }, [viewMode, selectedFlowId, elements]);
@@ -276,7 +240,6 @@ export default function App() {
     /* ------------------------------------------ */
     return (
         <div className="app-container">
-            {/* Left: Graph */}
             <div className="graph-container">
                 <CytoscapeComponent
                     elements={elements}
@@ -286,10 +249,9 @@ export default function App() {
                 />
             </div>
 
-            {/* Right: Controls + Node Details */}
             <div className="details-panel">
                 {/* View mode toggle */}
-                <div style={{ marginBottom: "12px" }}>
+                <div style={{ marginBottom: 12 }}>
                     <strong>View:</strong>{" "}
                     <button
                         onClick={() => setViewMode("infra")}
@@ -316,22 +278,22 @@ export default function App() {
                             cursor: "pointer",
                         }}
                     >
-                        API flows
+                        API Flows
                     </button>
                 </div>
 
-                {/* API flow selector */}
+                {/* Flow dropdown */}
                 {viewMode === "api" && (
-                    <div style={{ marginBottom: "12px" }}>
+                    <div style={{ marginBottom: 12 }}>
                         <label>
                             <strong>API Flow:&nbsp;</strong>
                             <select
                                 value={selectedFlowId || ""}
-                                onChange={(e) => setSelectedFlowId(e.target.value || null)}
+                                onChange={(e) => setSelectedFlowId(e.target.value)}
                             >
-                                {API_FLOWS.map((flow) => (
-                                    <option key={flow.id} value={flow.id}>
-                                        {flow.label}
+                                {API_FLOWS.map((f) => (
+                                    <option key={f.id} value={f.id}>
+                                        {f.label}
                                     </option>
                                 ))}
                             </select>
@@ -342,16 +304,7 @@ export default function App() {
                 {/* Node details */}
                 {selectedNode ? (
                     <div>
-                        <h2 style={{ marginTop: 0, marginBottom: 8 }}>Node Details</h2>
-                        <div style={{ fontSize: 14, marginBottom: 8 }}>
-                            <div><strong>ID:</strong> {selectedNode.id}</div>
-                            <div><strong>Label:</strong> {selectedNode.label}</div>
-                            <div><strong>Type:</strong> {selectedNode.type}</div>
-                            {selectedNode.repo && (
-                                <div><strong>Repo:</strong> {selectedNode.repo}</div>
-                            )}
-                        </div>
-                        <h3 style={{ fontSize: 14, marginBottom: 4 }}>Schema</h3>
+                        <h2>Node Details</h2>
                         <JsonView data={selectedNode.schema || {}} />
                     </div>
                 ) : (
