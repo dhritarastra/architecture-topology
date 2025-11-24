@@ -1,0 +1,18 @@
+{
+  "id": "db-to-lps-read",
+  "label": "DB → LPS (read refresh)",
+  "nodes": ["DB", "LPS"],
+  "edges": ["e4"],
+  "nodeSchemas": {
+    "LPS": {
+      "request": {
+        "licenceId": "string",
+        "includeAudit": "boolean"
+      },
+      "response": {
+        "status": "string",
+        "history": "array"
+      }
+    }
+  }
+}

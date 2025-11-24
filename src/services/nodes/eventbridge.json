@@ -1,0 +1,13 @@
+[
+  {
+    "id": "SU-EventBridge",
+    "label": "SU-EventBridge",
+    "repo": "molb-gcc-infra",
+    "type": "eventbridge",
+    "schema": {
+      "description": "EventBridge event for Status Update service",
+      "schedule-name": "<ENV>-status-update-job",
+      "schedule-expression": "20,50 * * * ? *"
+    }
+  }
+]

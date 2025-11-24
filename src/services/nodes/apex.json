@@ -1,0 +1,11 @@
+[
+  {
+    "id": "APEX",
+    "label": "APEX",
+    "repo": "NA",
+    "type": "apex",
+    "schema": {
+      "description": "Apex service is a gateway service that connects to agencies."
+    }
+  }
+]

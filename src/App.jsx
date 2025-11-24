@@ -73,6 +73,41 @@ const stylesheet = [
         },
     },
     {
+        selector: "node[type='library']",
+        style: {
+            "background-opacity": 0,
+            "background-image": "url(/aws-icons/ECS.svg)",
+            "background-fit": "cover",
+        },
+    },
+    {
+        selector: "node[type='dynamodb']",
+        style: {
+            shape: "ellipse",
+            width: 70,
+            height: 70,
+            "background-opacity": 0,
+            "background-image": "url(/aws-icons/DynamoDB.svg)",
+            "background-fit": "cover",
+        },
+    },
+    {
+        selector: "node[type='eventbridge']",
+        style: {
+            "background-opacity": 0,
+            "background-image": "url(/aws-icons/ECS.svg)",
+            "background-fit": "cover",
+        },
+    },
+    {
+        selector: "node[type='apex']",
+        style: {
+            "background-opacity": 0,
+            "background-image": "url(/aws-icons/ECS.svg)",
+            "background-fit": "cover",
+        },
+    },
+    {
         selector: "edge",
         style: {
             width: 3,
@@ -96,8 +131,8 @@ const stylesheet = [
         style: {
             "line-color": "#3b82f6",
             "target-arrow-color": "#3b82f6",
-            "text-margin-y": -10,
-            "text-margin-x": -12,
+            "text-margin-y": 0,
+            "text-margin-x": 0,
         },
     },
     {
@@ -105,8 +140,8 @@ const stylesheet = [
         style: {
             "line-color": "#10b981",
             "target-arrow-color": "#10b981",
-            "text-margin-y": 10,
-            "text-margin-x": -12,
+            "text-margin-y": 0,
+            "text-margin-x": 0,
         },
     },
     {
@@ -203,7 +238,7 @@ export default function App() {
             name: "dagre",
             rankDir: "LR",
             nodeSep: 50,
-            rankSep: 70,
+            rankSep: 100,
             edgeSep: 200,
         }).run();
 

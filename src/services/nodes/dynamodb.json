@@ -1,0 +1,17 @@
+[
+  {
+    "id": "DYNAMODB",
+    "label": "DYNAMODB",
+    "repo": "molb-gcc-infra",
+    "type": "dynamodb",
+    "schema": {
+      "request": {
+        "id": "string",
+        "timestamp": "string"
+      },
+      "response": {
+        "status": "string"
+      }
+    }
+  }
+]

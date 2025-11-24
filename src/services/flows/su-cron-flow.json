@@ -1,0 +1,28 @@
+{
+  "id": "f1",
+  "label": "SU-CRON → SQS → LPS → DB (write)",
+  "nodes": ["SU-CRON", "SQS_FIFO", "LPS", "DB"],
+  "edges": ["e0", "e1", "e2", "e3", "e4", "e5", "e6", "e7", "e8"],
+  "nodeSchemas": {
+    "SU-CRON": {
+      "request": {
+        "cronJobId": "string",
+        "scheduledAt": "string"
+      },
+      "response": {
+        "status": "string",
+        "queuedMessages": "number"
+      }
+    },
+    "LPS": {
+      "request": {
+        "licenceId": "string",
+        "channel": "string"
+      },
+      "response": {
+        "status": "string",
+        "state": "string"
+      }
+    }
+  }
+}
