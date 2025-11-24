@@ -161,6 +161,16 @@ const stylesheet = [
             "target-arrow-color": "#0f766e",
         },
     },
+    // current step (edge + its source/target node)
+    {
+        selector: ".current-step",
+        style: {
+            opacity: 1,
+            "line-color": "#f97316",
+            "target-arrow-color": "#f97316",
+            "border-color": "#f97316",
+        },
+    },
 ];
 
 /* -------------------------------------------------------
@@ -173,10 +183,13 @@ export default function App() {
     const [viewMode, setViewMode] = useState("infra");
     const [selectedFlowId, setSelectedFlowId] = useState(API_FLOWS[0]?.id || null);
 
+    // step index within selected flow.edges[]
+    const [currentStepIndex, setCurrentStepIndex] = useState(0);
+
     const cyRef = useRef(null);
     const layoutApplied = useRef(false);
 
-    // 👇 new: resizable split state & refs
+    // resizable split state & refs
     const [leftWidth, setLeftWidth] = useState(70); // percentage for graph panel
     const isResizingRef = useRef(false);
     const startXRef = useRef(0);
@@ -246,7 +259,6 @@ export default function App() {
         cy.fit();
     }, [elements]);
 
-
     /* ------------------------------------------
        MOUSE HANDLERS FOR RESIZE
     ------------------------------------------- */
@@ -256,22 +268,18 @@ export default function App() {
         const deltaPercent = (dx / window.innerWidth) * 100;
         let newWidth = startWidthRef.current + deltaPercent;
         newWidth = Math.max(30, Math.min(80, newWidth)); // clamp
-        setLeftWidth(newWidth); // 👈 DOM only, no cy.resize() here
+        setLeftWidth(newWidth); // DOM only
     }, []);
 
     const handleMouseUp = useCallback(() => {
         if (!isResizingRef.current) return;
         isResizingRef.current = false;
         window.removeEventListener("mousemove", handleMouseMove);
-        // window.removeEventListener("mouseup", handleMouseUp);
 
-        // 👇 Only now, after user stops dragging, tell Cytoscape to resize
         if (cyRef.current) {
             const cy = cyRef.current;
             requestAnimationFrame(() => {
-                cy.resize();
-                // Optional: only if you want it to re-center after drag
-                cy.fit();
+                cy.resize(); // no fit here if you want positions to stay
             });
         }
     }, [handleMouseMove]);
@@ -287,7 +295,6 @@ export default function App() {
         [leftWidth, handleMouseMove, handleMouseUp]
     );
 
-
     // cleanup on unmount
     useEffect(() => {
         return () => {
@@ -297,13 +304,20 @@ export default function App() {
     }, [handleMouseMove, handleMouseUp]);
 
     /* ------------------------------------------
-       APPLY FLOW HIGHLIGHTING FOR API MODE
+       RESET step index when flow/mode changes
+    ------------------------------------------- */
+    useEffect(() => {
+        setCurrentStepIndex(0);
+    }, [selectedFlowId, viewMode]);
+
+    /* ------------------------------------------
+       APPLY FLOW + STEP HIGHLIGHTING FOR API MODE
     ------------------------------------------- */
     useEffect(() => {
         const cy = cyRef.current;
         if (!cy) return;
 
-        cy.elements().removeClass("dimmed highlighted-flow");
+        cy.elements().removeClass("dimmed highlighted-flow current-step");
         if (viewMode !== "api" || !selectedFlowId) return;
 
         const flow = API_FLOWS.find((f) => f.id === selectedFlowId);
@@ -317,12 +331,36 @@ export default function App() {
         const nodesInFlow = allNodes.filter((n) => nodes.includes(n.id()));
         const edgesInFlow = allEdges.filter((e) => edges.includes(e.id()));
 
+        // Dim everything by default
         allNodes.addClass("dimmed");
         allEdges.addClass("dimmed");
 
+        // Undim + mark full flow
         nodesInFlow.removeClass("dimmed").addClass("highlighted-flow");
         edgesInFlow.removeClass("dimmed").addClass("highlighted-flow");
-    }, [viewMode, selectedFlowId, elements]);
+
+        // Step-specific highlight (currentStepIndex)
+        if (edges.length > 0) {
+            const clampedIndex = Math.min(
+                Math.max(currentStepIndex, 0),
+                edges.length - 1
+            );
+            const edgeId = edges[clampedIndex];
+            if (edgeId) {
+                const edge = cy.getElementById(edgeId);
+                if (edge && edge.length > 0) {
+                    edge.removeClass("dimmed").addClass("current-step");
+                    const src = edge.source();
+                    const tgt = edge.target();
+                    [src, tgt].forEach((node) => {
+                        if (node && node.length > 0) {
+                            node.removeClass("dimmed").addClass("current-step");
+                        }
+                    });
+                }
+            }
+        }
+    }, [viewMode, selectedFlowId, elements, currentStepIndex]);
 
     // Find active flow (for API mode)
     const activeFlow = useMemo(() => {
@@ -334,7 +372,6 @@ export default function App() {
     const getSchemaForSelectedNode = (nodeData) => {
         if (!nodeData) return {};
 
-        // If we're in API mode and this flow defines a schema for this node, use it
         if (viewMode === "api" && activeFlow && activeFlow.nodeSchemas) {
             const flowSchema = activeFlow.nodeSchemas[nodeData.id];
             if (flowSchema) {
@@ -342,10 +379,8 @@ export default function App() {
             }
         }
 
-        // Fallback: base infra schema from node definition
         return nodeData.schema || {};
     };
-
 
     /* ------------------------------------------ */
     return (
@@ -422,6 +457,80 @@ export default function App() {
                                 ))}
                             </select>
                         </label>
+                    </div>
+                )}
+
+                {/* Step-by-step controls (only in API mode, when flow loaded) */}
+                {viewMode === "api" && activeFlow && activeFlow.edges && activeFlow.edges.length > 0 && (
+                    <div style={{ marginBottom: 12 }}>
+                        <div style={{ marginBottom: 4 }}>
+                            <strong>
+                                Step {Math.min(currentStepIndex + 1, activeFlow.edges.length)} of{" "}
+                                {activeFlow.edges.length}
+                            </strong>
+                        </div>
+                        <div style={{ display: "flex", gap: 8, marginBottom: 4 }}>
+                            <button
+                                onClick={() =>
+                                    setCurrentStepIndex((idx) => Math.max(0, idx - 1))
+                                }
+                                disabled={currentStepIndex <= 0}
+                                style={{
+                                    padding: "4px 8px",
+                                    borderRadius: 4,
+                                    border: "1px solid #d1d5db",
+                                    background:
+                                        currentStepIndex <= 0 ? "#f3f4f6" : "#e5e7eb",
+                                    cursor:
+                                        currentStepIndex <= 0 ? "not-allowed" : "pointer",
+                                }}
+                            >
+                                ◀ Prev
+                            </button>
+                            <button
+                                onClick={() =>
+                                    setCurrentStepIndex((idx) =>
+                                        Math.min(activeFlow.edges.length - 1, idx + 1)
+                                    )
+                                }
+                                disabled={currentStepIndex >= activeFlow.edges.length - 1}
+                                style={{
+                                    padding: "4px 8px",
+                                    borderRadius: 4,
+                                    border: "1px solid #d1d5db",
+                                    background:
+                                        currentStepIndex >= activeFlow.edges.length - 1
+                                            ? "#f3f4f6"
+                                            : "#e5e7eb",
+                                    cursor:
+                                        currentStepIndex >= activeFlow.edges.length - 1
+                                            ? "not-allowed"
+                                            : "pointer",
+                                }}
+                            >
+                                Next ▶
+                            </button>
+                        </div>
+                        <div style={{ fontSize: 12, color: "#4b5563" }}>
+                            {(() => {
+                                if (!activeFlow.edges.length) return null;
+                                const edgeId =
+                                    activeFlow.edges[
+                                        Math.min(
+                                            currentStepIndex,
+                                            activeFlow.edges.length - 1
+                                        )
+                                        ];
+                                const edgeEl = elements.find(
+                                    (el) => el.data && el.data.id === edgeId
+                                );
+                                if (!edgeEl) return `Edge: ${edgeId}`;
+                                const { source, target, label } = edgeEl.data;
+                                return `Step: ${source} → ${target}${
+                                    label ? ` (${label})` : ""
+                                }`;
+                            })()}
+                        </div>
                     </div>
                 )}
 
