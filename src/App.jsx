@@ -229,6 +229,10 @@ export default function App() {
             Array.isArray(mod.default) ? mod.default : []
         );
 
+        // 🔒 determinism: stable ordering
+        allNodes.sort((a, b) => String(a.id).localeCompare(String(b.id)));
+        allEdges.sort((a, b) => String(a.id).localeCompare(String(b.id)));
+
         const nodes = allNodes.map((n) => ({
             data: { ...n },
         }));
@@ -262,24 +266,75 @@ export default function App() {
         });
     }, []);
 
+    const [layoutVersion, setLayoutVersion] = useState(0);
+
+    const runLayout = useCallback((opts = {}) => {
+        const cy = cyRef.current;
+        if (!cy) return;
+
+        // Stop any running layout
+        if (cy._activeLayout) {
+            try { cy._activeLayout.stop(); } catch (_) {}
+        }
+
+        // ✅ symmetry helper: snap nodes to a clean grid BEFORE dagre
+        // This reduces micro-misalignment and makes the final result look more "even"
+        const gridSize = 20;
+        cy.nodes().forEach((n) => {
+            const p = n.position();
+            n.position({
+                x: Math.round(p.x / gridSize) * gridSize,
+                y: Math.round(p.y / gridSize) * gridSize,
+            });
+        });
+
+        const layout = cy.layout({
+            name: "dagre",
+            rankDir: "LR",
+
+            // "symmetry / clean spacing" knobs
+            nodeSep: 100,
+            rankSep: 120,
+            edgeSep: 100,
+
+            // This often produces a more balanced, consistent structure
+            ranker: "network-simplex",
+
+            // Force dagre to respect node dimensions consistently
+            // (helps reduce overlaps/odd packing)
+            spacingFactor: 1.15,
+
+            // Keep some breathing space around the graph
+            padding: 60,
+
+            // Avoid animation jitter (deterministic visual)
+            animate: false,
+
+            ...opts,
+        });
+
+        cy._activeLayout = layout;
+        layout.run();
+
+        requestAnimationFrame(() => {
+            cy.fit(undefined, 50);
+        });
+    }, []);
+
+
     /* ------------------------------------------
        APPLY DAGRE LAYOUT ONCE
     ------------------------------------------- */
     useEffect(() => {
-        if (!cyRef.current || !elements.length || layoutApplied.current) return;
+        if (!cyRef.current || !elements.length) return;
 
-        const cy = cyRef.current;
-        cy.layout({
-            name: "dagre",
-            rankDir: "LR",
-            nodeSep: 50,
-            rankSep: 100,
-            edgeSep: 200,
-        }).run();
+        // Run layout on first load and every refresh
+        runLayout();
 
+        // keep your flag if you want, but you no longer need it
         layoutApplied.current = true;
-        cy.fit();
-    }, [elements]);
+    }, [elements, layoutVersion, runLayout]);
+
 
     /* ------------------------------------------
        MOUSE HANDLERS FOR RESIZE
@@ -460,6 +515,20 @@ export default function App() {
                         }}
                     >
                         API Flows
+                    </button>
+                    <button
+                        onClick={() => setLayoutVersion((v) => v + 1)}
+                        style={{
+                            marginLeft: 12,
+                            padding: "4px 8px",
+                            background: "#111827",
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: 4,
+                            cursor: "pointer",
+                        }}
+                    >
+                        Refresh Layout
                     </button>
                 </div>
 

@@ -6,6 +6,7 @@
     "DASHBOARD-BACKEND",
     "DASHBOARD-WEB",
     "PAYMENT-WEB",
+    "PAYMENT-SERVICE",
     "STRIPE",
     "LPA",
     "LPS",
