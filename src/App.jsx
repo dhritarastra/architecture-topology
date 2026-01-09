@@ -108,6 +108,28 @@ const stylesheet = [
         },
     },
     {
+        selector: "node[type='mop']",
+        style: {
+            shape: "ellipse",
+            width: 70,
+            height: 70,
+            "background-opacity": 0,
+            "background-image": "url(/aws-icons/group.png)",
+            "background-fit": "cover",
+        },
+    },
+    {
+        selector: "node[type='cloudfront']",
+        style: {
+            shape: "ellipse",
+            width: 70,
+            height: 70,
+            "background-opacity": 0,
+            "background-image": "url(/aws-icons/CloudFront.svg)",
+            "background-fit": "cover",
+        },
+    },
+    {
         selector: "edge",
         style: {
             width: 3,

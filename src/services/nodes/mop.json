@@ -1,0 +1,11 @@
+[
+  {
+    "id": "MoP",
+    "label": "MoP",
+    "repo": "NA",
+    "type": "mop",
+    "schema": {
+      "description": "Depicts Member of Public also the end user."
+    }
+  }
+]

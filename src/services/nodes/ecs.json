@@ -37,6 +37,42 @@
         "state": "string"
       }
     }
+  },
+  {
+    "id": "PAYMENT-SERVICE",
+    "label": "PAYMENT-SERVICE",
+    "repo": "molb-payment",
+    "type": "ecs",
+    "schema": {
+      "entity": {
+        "id": "string",
+        "state": "string"
+      }
+    }
+  },
+  {
+    "id": "DASHBOARD-BACKEND",
+    "label": "DASHBOARD-BACKEND",
+    "repo": "molb-dashboard-backend",
+    "type": "ecs",
+    "schema": {
+      "entity": {
+        "id": "string",
+        "state": "string"
+      }
+    }
+  },
+  {
+    "id": "STRIPE",
+    "label": "STRIPE",
+    "repo": "",
+    "type": "ecs",
+    "schema": {
+      "entity": {
+        "id": "string",
+        "state": "string"
+      }
+    }
   }
 ]
 

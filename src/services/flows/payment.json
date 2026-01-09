@@ -1,0 +1,53 @@
+{
+  "id": "f1",
+  "label": "Payment Flow",
+  "nodes": [
+    "MoP",
+    "DASHBOARD-BACKEND",
+    "DASHBOARD-WEB",
+    "PAYMENT-WEB",
+    "STRIPE",
+    "LPA",
+    "LPS",
+    "DB"
+  ],
+  "edges": [
+    "e9",
+    "e10",
+    "e17",
+    "e18",
+    "e19",
+    "e20",
+    "e11",
+    "e12",
+    "e13",
+    "e18",
+    "e19",
+    "e20",
+    "e21",
+    "e22",
+    "e7"
+  ],
+  "nodeSchemas": {
+    "SU-CRON": {
+      "request": {
+        "cronJobId": "string",
+        "scheduledAt": "string"
+      },
+      "response": {
+        "status": "string",
+        "queuedMessages": "number"
+      }
+    },
+    "LPS": {
+      "request": {
+        "licenceId": "This is Payment related flow",
+        "channel": "string"
+      },
+      "response": {
+        "status": "string",
+        "state": "string"
+      }
+    }
+  }
+}

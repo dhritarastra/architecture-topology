@@ -1,12 +1,26 @@
 [
   { "id": "e0", "source": "SU-EventBridge", "target": "SU-CRON", "label": "triggers" },
   { "id": "e1", "source": "SU-CRON", "target": "DYNAMODB", "label": "writes", "dir": "forward"},
-  { "id": "e2", "source": "DYNAMODB", "target": "SU-CRON", "label": "reads", "dir": "backward"},
+  { "id": "e2", "source": "DYNAMODB", "target": "SU-CRON", "label": "reads"},
   { "id": "e3", "source": "SU-CRON", "target": "APEX", "label": "request", "dir": "forward"},
-  { "id": "e4", "source": "APEX", "target": "SU-CRON", "label": "response", "dir": "backward"},
+  { "id": "e4", "source": "APEX", "target": "SU-CRON", "label": "response"},
   { "id": "e5", "source": "SU-CRON", "target": "SQS_FIFO", "label": "pushes" },
   { "id": "e6", "source": "SQS_FIFO", "target": "LPS", "label": "polls" },
-  { "id": "e7", "source": "LPS", "target": "DB", "label": "writes", "dir": "forward" },
-  { "id": "e8", "source": "DB", "target": "LPS", "label": "reads", "dir": "backward" }
+  { "id": "e7", "source": "LPS", "target": "DB", "label": "writes"},
+  { "id": "e8", "source": "DB", "target": "LPS", "label": "reads" },
+  { "id": "e9", "source": "MoP", "target": "DASHBOARD-WEB", "label": "Submits Payment Request"},
+  { "id": "e10", "source": "DASHBOARD-WEB", "target": "DASHBOARD-BACKEND", "label": "request"},
+  { "id": "e11", "source": "DASHBOARD-BACKEND", "target": "DASHBOARD-WEB", "label": "response" },
+  { "id": "e12", "source": "DASHBOARD-WEB", "target": "PAYMENT-WEB", "label": "calls"},
+  { "id": "e13", "source": "PAYMENT-WEB", "target": "PAYMENT-SERVICE", "label": "request"},
+  { "id": "e14", "source": "PAYMENT-SERVICE", "target": "PAYMENT-WEB", "label": "response"},
+  { "id": "e15", "source": "PAYMENT-SERVICE", "target": "LPA", "label": "request"},
+  { "id": "e16", "source": "LPA", "target": "PAYMENT-SERVICE", "label": "response"},
+  { "id": "e17", "source": "DASHBOARD-BACKEND", "target": "PAYMENT-SERVICE", "label": "request"},
+  { "id": "e18", "source": "PAYMENT-SERVICE", "target": "STRIPE", "label": "request"},
+  { "id": "e19", "source": "STRIPE", "target": "PAYMENT-SERVICE", "label": "response"},
+  { "id": "e20", "source": "PAYMENT-SERVICE", "target": "DASHBOARD-BACKEND", "label": "response" },
+  { "id": "e21", "source": "DASHBOARD-BACKEND", "target": "LPA", "label": "Callback request"},
+  { "id": "e22", "source": "LPA", "target": "LPS", "label": "request"}
 ]
 
