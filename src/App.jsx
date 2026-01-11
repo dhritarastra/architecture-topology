@@ -1,19 +1,18 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import {useState, useRef, useEffect, useMemo, useCallback} from "react";
 import CytoscapeComponent from "react-cytoscapejs";
 import cytoscape from "cytoscape";
 import dagre from "cytoscape-dagre";
 
-import { JsonView } from "react-json-view-lite";
+import {JsonView} from "react-json-view-lite";
 import "react-json-view-lite/dist/index.css";
 import "./App.css";
 
 // auto-import all JSON definitions
-const nodeModules = import.meta.glob("./services/nodes/*.json", { eager: true });
-const edgeModules = import.meta.glob("./services/edges/*.json", { eager: true });
-const flowModules = import.meta.glob("./services/flows/*.json", { eager: true });
+const nodeModules = import.meta.glob("./services/nodes/*.json", {eager: true});
+const edgeModules = import.meta.glob("./services/edges/*.json", {eager: true});
+const flowModules = import.meta.glob("./services/flows/*.json", {eager: true});
 
 cytoscape.use(dagre);
-
 /* -------------------------------------------------------
    LOAD API FLOWS dynamically
 -------------------------------------------------------- */
@@ -166,33 +165,86 @@ const stylesheet = [
             "text-margin-x": 0,
         },
     },
+    // OFF-FLOW (apply to nodes + edges)
     {
-        selector: ".dimmed",
+        selector: "node.off-flow",
         style: {
-            opacity: 0.15,
-            "text-opacity": 0.2,
+            opacity: 0.05,
+            "text-opacity": 0.05,
+        },
+    },
+    {
+        selector: "edge.off-flow",
+        style: {
+            opacity: 0.05,
+            "text-opacity": 0.05,
             "line-style": "dashed",
         },
     },
+
+// NEXT (upcoming)
     {
-        selector: ".highlighted-flow",
+        selector: "node.flow-next",
         style: {
-            opacity: 1,
-            "line-style": "solid",
+            opacity: 0.55,
+            "text-opacity": 0.35,
+            "border-color": "#9ca3af",
+            "border-width": 3,
+        },
+    },
+    {
+        selector: "edge.flow-next",
+        style: {
+            opacity: 0.55,
+            "text-opacity": 0.35,
+            "line-color": "#9ca3af",
+            "target-arrow-color": "#9ca3af",
+            width: 3,
+        },
+    },
+
+// DONE (previous)
+    {
+        selector: "node.flow-done",
+        style: {
+            opacity: 0.95,
+            "text-opacity": 0.85,
+            "border-color": "#0f766e",
+            "border-width": 4,
+        },
+    },
+    {
+        selector: "edge.flow-done",
+        style: {
+            opacity: 0.95,
+            "text-opacity": 0.85,
             "line-color": "#0f766e",
             "target-arrow-color": "#0f766e",
+            width: 5,
         },
     },
-    // current step (edge + its source/target node)
+
+// CURRENT (active)
     {
-        selector: ".current-step",
+        selector: "node.flow-current",
         style: {
             opacity: 1,
-            "line-color": "#f97316",
-            "target-arrow-color": "#f97316",
+            "text-opacity": 1,
             "border-color": "#f97316",
+            "border-width": 6,
         },
     },
+    {
+        selector: "edge.flow-current",
+        style: {
+            opacity: 1,
+            "text-opacity": 1,
+            "line-color": "#f97316",
+            "target-arrow-color": "#f97316",
+            width: 7,
+        },
+    },
+
 ];
 
 /* -------------------------------------------------------
@@ -205,14 +257,15 @@ export default function App() {
     const [viewMode, setViewMode] = useState("infra");
     const [selectedFlowId, setSelectedFlowId] = useState(API_FLOWS[0]?.id || null);
 
+    const handleMouseUpRef = useRef(null);
     // step index within selected flow.edges[]
     const [currentStepIndex, setCurrentStepIndex] = useState(0);
 
     const cyRef = useRef(null);
     const layoutApplied = useRef(false);
 
-    // resizable split state & refs
-    const [leftWidth, setLeftWidth] = useState(70); // percentage for graph panel
+    // resizable split state and refs
+    const [leftWidth, setLeftWidth] = useState(70);
     const isResizingRef = useRef(false);
     const startXRef = useRef(0);
     const startWidthRef = useRef(70);
@@ -234,11 +287,11 @@ export default function App() {
         allEdges.sort((a, b) => String(a.id).localeCompare(String(b.id)));
 
         const nodes = allNodes.map((n) => ({
-            data: { ...n },
+            data: {...n},
         }));
 
         const edges = allEdges.map((e) => ({
-            data: { ...e },
+            data: {...e},
         }));
 
         return [...nodes, ...edges];
@@ -274,7 +327,10 @@ export default function App() {
 
         // Stop any running layout
         if (cy._activeLayout) {
-            try { cy._activeLayout.stop(); } catch (_) {}
+            try {
+                cy._activeLayout.stop();
+            } catch (_) {
+            }
         }
 
         // ✅ symmetry helper: snap nodes to a clean grid BEFORE dagre
@@ -352,6 +408,8 @@ export default function App() {
         if (!isResizingRef.current) return;
         isResizingRef.current = false;
         window.removeEventListener("mousemove", handleMouseMove);
+        window.removeEventListener("mouseup", handleMouseUpRef.current);
+
 
         if (cyRef.current) {
             const cy = cyRef.current;
@@ -361,16 +419,23 @@ export default function App() {
         }
     }, [handleMouseMove]);
 
+    useEffect(() => {
+        handleMouseUpRef.current = handleMouseUp;
+    }, [handleMouseUp]);
+
+
     const handleMouseDown = useCallback(
         (e) => {
             isResizingRef.current = true;
             startXRef.current = e.clientX;
             startWidthRef.current = leftWidth;
+
             window.addEventListener("mousemove", handleMouseMove);
-            window.addEventListener("mouseup", handleMouseUp);
+            window.addEventListener("mouseup", handleMouseUpRef.current);
         },
-        [leftWidth, handleMouseMove, handleMouseUp]
+        [leftWidth, handleMouseMove]
     );
+
 
     // cleanup on unmount
     useEffect(() => {
@@ -394,50 +459,111 @@ export default function App() {
         const cy = cyRef.current;
         if (!cy) return;
 
-        cy.elements().removeClass("dimmed highlighted-flow current-step");
+        // Clear all step/flow classes first
+        cy.elements().removeClass("off-flow flow-next flow-done flow-current");
+
+        // Only apply in API mode
         if (viewMode !== "api" || !selectedFlowId) return;
 
         const flow = API_FLOWS.find((f) => f.id === selectedFlowId);
         if (!flow) return;
 
-        const { nodes = [], edges = [] } = flow;
+        const flowEdgeIds = Array.isArray(flow.edges) ? flow.edges : [];
+        if (flowEdgeIds.length === 0) {
+            // If flow has no edges, just grey everything else out
+            cy.elements().addClass("off-flow");
+            return;
+        }
 
-        const allNodes = cy.nodes();
-        const allEdges = cy.edges();
+        // Clamp index
+        const idx = Math.min(Math.max(currentStepIndex, 0), flowEdgeIds.length - 1);
 
-        const nodesInFlow = allNodes.filter((n) => nodes.includes(n.id()));
-        const edgesInFlow = allEdges.filter((e) => edges.includes(e.id()));
+        const doneEdgeIds = flowEdgeIds.slice(0, idx);      // previous edges
+        const currentEdgeId = flowEdgeIds[idx];             // current edge
+        const nextEdgeIds = flowEdgeIds.slice(idx + 1);     // future edges
 
-        // Dim everything by default
-        allNodes.addClass("dimmed");
-        allEdges.addClass("dimmed");
-
-        // Undim + mark full flow
-        nodesInFlow.removeClass("dimmed").addClass("highlighted-flow");
-        edgesInFlow.removeClass("dimmed").addClass("highlighted-flow");
-
-        // Step-specific highlight (currentStepIndex)
-        if (edges.length > 0) {
-            const clampedIndex = Math.min(
-                Math.max(currentStepIndex, 0),
-                edges.length - 1
-            );
-            const edgeId = edges[clampedIndex];
-            if (edgeId) {
-                const edge = cy.getElementById(edgeId);
-                if (edge && edge.length > 0) {
-                    edge.removeClass("dimmed").addClass("current-step");
-                    const src = edge.source();
-                    const tgt = edge.target();
-                    [src, tgt].forEach((node) => {
-                        if (node && node.length > 0) {
-                            node.removeClass("dimmed").addClass("current-step");
-                        }
-                    });
+        // Helper to collect nodes touched by a list of edges
+        const collectTouchedNodes = (edgeIds) => {
+            const nodeIds = new Set();
+            edgeIds.forEach((eid) => {
+                const e = cy.getElementById(eid);
+                if (e && e.length > 0) {
+                    const s = e.data("source");
+                    const t = e.data("target");
+                    if (s) nodeIds.add(s);
+                    if (t) nodeIds.add(t);
                 }
+            });
+            return nodeIds;
+        };
+
+        const doneNodeIds = collectTouchedNodes(doneEdgeIds);
+        const nextNodeIds = collectTouchedNodes(nextEdgeIds);
+
+        // Current edge + current nodes
+        const currentEdge = currentEdgeId ? cy.getElementById(currentEdgeId) : null;
+        const currentNodeIds = new Set();
+        if (currentEdge && currentEdge.length > 0) {
+            const s = currentEdge.data("source");
+            const t = currentEdge.data("target");
+            if (s) currentNodeIds.add(s);
+            if (t) currentNodeIds.add(t);
+        }
+
+        // 1) Grey out EVERYTHING by default (stronger than your old "dimmed")
+        cy.elements().addClass("off-flow");
+
+        // 2) Un-grey all edges/nodes that are part of the flow path (done/current/next)
+        const allRelevantEdgeIds = [...doneEdgeIds, currentEdgeId, ...nextEdgeIds].filter(Boolean);
+        const allRelevantNodeIds = new Set([
+            ...doneNodeIds,
+            ...currentNodeIds,
+            ...nextNodeIds,
+        ]);
+
+        cy.edges().filter((e) => allRelevantEdgeIds.includes(e.id()))
+            .removeClass("off-flow");
+
+        cy.nodes().filter((n) => allRelevantNodeIds.has(n.id()))
+            .removeClass("off-flow");
+
+        // 3) Apply classes by phase
+        // Done
+        if (doneEdgeIds.length) {
+            cy.edges().filter((e) => doneEdgeIds.includes(e.id()))
+                .addClass("flow-done");
+            cy.nodes().filter((n) => doneNodeIds.has(n.id()))
+                .addClass("flow-done");
+        }
+
+        // Next
+        if (nextEdgeIds.length) {
+            cy.edges().filter((e) => nextEdgeIds.includes(e.id()))
+                .addClass("flow-next");
+            cy.nodes().filter((n) => nextNodeIds.has(n.id()))
+                .addClass("flow-next");
+        }
+
+        // Current (overrides done/next where needed)
+        if (currentEdgeId) {
+            const e = cy.getElementById(currentEdgeId);
+            if (e && e.length > 0) e.addClass("flow-current");
+
+            cy.nodes().filter((n) => currentNodeIds.has(n.id()))
+                .addClass("flow-current");
+        }
+
+        // 4) Auto-center on current step (nice UX while stepping)
+        if (currentEdgeId) {
+            const e = cy.getElementById(currentEdgeId);
+            if (e && e.length > 0) {
+                // center on the edge (you can also center on nodes if you prefer)
+                cy.animate({ center: { eles: e }, duration: 200 });
             }
         }
-    }, [viewMode, selectedFlowId, elements, currentStepIndex]);
+
+    }, [viewMode, selectedFlowId, currentStepIndex]);
+
 
     // Find active flow (for API mode)
     const activeFlow = useMemo(() => {
@@ -465,11 +591,11 @@ export default function App() {
             {/* LEFT: graph */}
             <div
                 className="graph-container"
-                style={{ width: `${leftWidth}%` }}
+                style={{width: `${leftWidth}%`}}
             >
                 <CytoscapeComponent
                     elements={elements}
-                    style={{ width: "100%", height: "100%" }}
+                    style={{width: "100%", height: "100%"}}
                     cy={onCyInit}
                     stylesheet={stylesheet}
                 />
@@ -484,10 +610,10 @@ export default function App() {
             {/* RIGHT: details */}
             <div
                 className="details-panel"
-                style={{ width: `${100 - leftWidth}%` }}
+                style={{width: `${100 - leftWidth}%`}}
             >
                 {/* View mode toggle */}
-                <div style={{ marginBottom: 12 }}>
+                <div style={{marginBottom: 12}}>
                     <strong>View:</strong>{" "}
                     <button
                         onClick={() => setViewMode("infra")}
@@ -534,7 +660,7 @@ export default function App() {
 
                 {/* Flow dropdown */}
                 {viewMode === "api" && (
-                    <div style={{ marginBottom: 12 }}>
+                    <div style={{marginBottom: 12}}>
                         <label>
                             <strong>API Flow:&nbsp;</strong>
                             <select
@@ -553,14 +679,14 @@ export default function App() {
 
                 {/* Step-by-step controls (only in API mode, when flow loaded) */}
                 {viewMode === "api" && activeFlow && activeFlow.edges && activeFlow.edges.length > 0 && (
-                    <div style={{ marginBottom: 12 }}>
-                        <div style={{ marginBottom: 4 }}>
+                    <div style={{marginBottom: 12}}>
+                        <div style={{marginBottom: 4}}>
                             <strong>
                                 Step {Math.min(currentStepIndex + 1, activeFlow.edges.length)} of{" "}
                                 {activeFlow.edges.length}
                             </strong>
                         </div>
-                        <div style={{ display: "flex", gap: 8, marginBottom: 4 }}>
+                        <div style={{display: "flex", gap: 8, marginBottom: 4}}>
                             <button
                                 onClick={() =>
                                     setCurrentStepIndex((idx) => Math.max(0, idx - 1))
@@ -602,7 +728,7 @@ export default function App() {
                                 Next ▶
                             </button>
                         </div>
-                        <div style={{ fontSize: 12, color: "#4b5563" }}>
+                        <div style={{fontSize: 12, color: "#4b5563"}}>
                             {(() => {
                                 if (!activeFlow.edges.length) return null;
                                 const edgeId =
@@ -616,7 +742,7 @@ export default function App() {
                                     (el) => el.data && el.data.id === edgeId
                                 );
                                 if (!edgeEl) return `Edge: ${edgeId}`;
-                                const { source, target, label } = edgeEl.data;
+                                const {source, target, label} = edgeEl.data;
                                 return `Step: ${source} → ${target}${
                                     label ? ` (${label})` : ""
                                 }`;
@@ -629,7 +755,7 @@ export default function App() {
                 {selectedNode ? (
                     <div>
                         <h2>Node Details</h2>
-                        <JsonView data={getSchemaForSelectedNode(selectedNode)} />
+                        <JsonView data={getSchemaForSelectedNode(selectedNode)}/>
                     </div>
                 ) : (
                     <div>Select a node to inspect its schema.</div>
