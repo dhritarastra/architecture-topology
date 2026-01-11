@@ -24,31 +24,304 @@
     "e13",
     "e18",
     "e19",
-    "e20",
+    "e23",
     "e21",
     "e22",
     "e7"
   ],
-  "nodeSchemas": {
-    "SU-CRON": {
-      "request": {
-        "cronJobId": "string",
-        "scheduledAt": "string"
-      },
-      "response": {
-        "status": "string",
-        "queuedMessages": "number"
+  "steps": [
+    {
+      "edgeId": "e9",
+      "title": "User submits payment request",
+      "nodeSchemas": {
+        "MoP": {
+          "Description": "Member of Public initiates payment"
+        }
       }
     },
-    "LPS": {
-      "request": {
-        "licenceId": "This is Payment related flow",
-        "channel": "string"
-      },
-      "response": {
-        "status": "string",
-        "state": "string"
+    {
+      "edgeId": "e10",
+      "title": "DASHBOARD-WEB calls DASHBOAED-BACKEND",
+      "nodeSchemas": {
+        "DASHBOARD-WEB": {
+          "request": {
+            "Description": "Requests DASHBOARD-BACKEND to create payment request"
+          }
+        }
+      }
+    },
+    {
+      "edgeId": "e17",
+      "title": "DASHBOARD-BACKEND calls Payment Service",
+      "nodeSchemas": {
+        "DASHBOARD-BACKEND": {
+          "request": {
+            "Description": "Requests PAYMENT-SERVICE to create payment reference with metadata in JWE String"
+          }
+        }
+      }
+    },
+    {
+      "edgeId": "e18",
+      "title": "Payment Service calls Stripe (first time)",
+      "nodeSchemas": {
+        "PAYMENT-SERVICE": {
+          "request": {
+            "Description": "Request to create Stripe customer and return JWE String response"
+          }
+        }
+      }
+    },
+    {
+      "edgeId": "e19",
+      "title": "STRIPE responds to Payment Service (first time)",
+      "nodeSchemas": {
+        "STRIPE": {
+          "response": {
+            "Description": "STRIPE responds with JWE String to be set in the cookie post creation of Stripe customer"
+          }
+        }
+      }
+    },
+    {
+      "edgeId": "e20",
+      "title": "Payment Service responds to DASHBOARD-BACKEND (first time)",
+      "nodeSchemas": {
+        "PAYMENT-SERVICE": {
+          "response": {
+            "Description": "JWE String response to be set in the cookie post creation of Stripe customer"
+          }
+        }
+      }
+    },
+    {
+      "edgeId": "e11",
+      "title": "DASHBOARD-BACKEND responds to DASHBOARD-WEB",
+      "nodeSchemas": {
+        "DASHBOARD-BACKEND": {
+          "response": {
+            "Description": "DASHBOARD_BACKEND sends the JWE String response to DASHBOARD-WEB to be set in the cookie for redirect"
+          }
+        }
+      }
+    },
+    {
+      "edgeId": "e12",
+      "title": "DASHBOARD-WEB redirects to PAYMENT-WEB",
+      "nodeSchemas": {
+        "DASHBOARD-WEB": {
+          "request": {
+            "Description": "DASHBOARD-WEB redirects to PAYMENT-WEB with set cookie"
+          }
+        }
+      }
+    },
+    {
+      "edgeId": "e13",
+      "title": "PAYMENT-WEB calls PAYMENT-SERVICE",
+      "nodeSchemas": {
+        "PAYMENT-WEB": {
+          "request": {
+            "Description": "PAYMENT-WEB sends tokenized stripe payment method to PAYMENT-SERVICE to initiate payment."
+          }
+        }
+      }
+    },
+    {
+      "edgeId": "e18",
+      "title": "PAYMENT-SERVICE calls STRIPE (second time)",
+      "nodeSchemas": {
+        "PAYMENT-SERVICE": {
+          "request": {
+            "Description": "PAYMENT-Service calls Stripe to create payment intent in Agency stripe account with payment method and domain reference data."
+          }
+        }
+      }
+    },
+    {
+      "edgeId": "e19",
+      "title": "STRIPE responds to PAYMENT-SERVICE (second time)",
+      "nodeSchemas": {
+        "STRIPE": {
+          "response": {
+            "Description": "Stripe responds to PAYMENT-SERVICE with the outcome of the payment."
+          }
+        }
+      }
+    },
+    {
+      "edgeId": "e23",
+      "title": "PAYMENT-SERVICE calls DASHBOARD-BACKEND (second time)",
+      "nodeSchemas": {
+        "PAYMENT-SERVICE": {
+          "request": {
+            "Description": "PAYMENT-SERVICE calls DASHBOARD-BACKEND to notify the domain of the outcome of the payment processing."
+          }
+        }
+      }
+    },
+    {
+      "edgeId": "e21",
+      "title": "DASHBOARD-BACKEND calls LPA",
+      "nodeSchemas": {
+        "DASHBOARD-BACKEND": {
+          "request": {
+            "Description": "DASHBOARD-BACKEND makes payment callback to LPA",
+            "URI": "/payments/callback",
+            "dummy-payload": {
+              "domainReferences": [
+                {
+                  "domainReferenceId": "DR-000001",
+                  "paymentReferenceNumber": "PRN-2026-000001",
+                  "domainReferenceData": {
+                    "entityName": "Acme Pte Ltd",
+                    "typeCode": "LIC",
+                    "applicationNumber": "APP-2026-000123"
+                  },
+                  "adviceNumber": "ADV-000001",
+                  "description": "Licence application payment",
+                  "domainCode": "LICENCE",
+                  "agencyCode": "AGENCY1",
+                  "stage": 1,
+                  "createdAt": "2026-01-11T10:15:30Z",
+                  "updatedAt": "2026-01-11T10:20:00Z",
+                  "paymentTransactions": [
+                    {
+                      "transactionNumber": "TXN-000001",
+                      "gatewayTransactionNumber": "GTW-1234567890",
+                      "receiptNumber": "RCPT-000001",
+                      "adviceNumber": "ADV-000001",
+                      "status": "SUCCESS",
+                      "paymentMethodType": "CARD",
+                      "transactionCreatedAt": "2026-01-11T10:16:00Z",
+                      "totalAmount": 120.5,
+                      "totalTaxAmount": 8.4,
+                      "createdAt": "2026-01-11T10:16:10Z",
+                      "updatedAt": "2026-01-11T10:16:20Z"
+                    },
+                    {
+                      "transactionNumber": "TXN-000002",
+                      "gatewayTransactionNumber": null,
+                      "receiptNumber": null,
+                      "adviceNumber": "ADV-000001",
+                      "status": "PENDING",
+                      "paymentMethodType": "PAYNOW",
+                      "transactionCreatedAt": "2026-01-11T10:18:00Z",
+                      "totalAmount": 120.5,
+                      "totalTaxAmount": 8.4,
+                      "createdAt": "2026-01-11T10:18:10Z",
+                      "updatedAt": "2026-01-11T10:18:20Z"
+                    }
+                  ],
+                  "lineItems": [
+                    {
+                      "description": "Application fee",
+                      "amount": 100,
+                      "taxAmount": 7,
+                      "previousPayment": "2025-12-01",
+                      "nextPayment": "2026-12-01",
+                      "createdAt": "2026-01-11T10:15:40Z",
+                      "updatedAt": "2026-01-11T10:15:50Z"
+                    },
+                    {
+                      "description": "Processing fee",
+                      "amount": 20.5,
+                      "taxAmount": 1.4,
+                      "previousPayment": "2025-12-01",
+                      "nextPayment": "2026-12-01",
+                      "createdAt": "2026-01-11T10:15:41Z",
+                      "updatedAt": "2026-01-11T10:15:51Z"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "edgeId": "e22",
+      "title": "LPA calls LPS",
+      "nodeSchemas": {
+        "PAYMENT-WEB": {
+          "request": {
+            "Description": "LPA calls LPS in case of successful payment to update licence/application status accordingly",
+            "URI": "/update-status",
+            "dummy-payload": {
+              "paymentInfo": {
+                "paymentMode": "CARD",
+                "paymentDate": "2026-01-11",
+                "paymentAmount": "100.00",
+                "transactionNumber": "TXN-123456789",
+                "receiptNumber": "RCPT-987654321"
+              },
+              "sensitiveGeneralInfoAgencyData": {
+                "general": {
+                  "applicationNumber": "APP-2026-000001",
+                  "dateSent": "2026-01-11T10:15:30Z",
+                  "transactionType": "new",
+                  "licenceName": "Sample Licence"
+                },
+                "profile": {
+                  "applyAs": "As applicant",
+                  "channel": "ONLINE"
+                },
+                "applicant": {
+                  "name": "Jane Doe",
+                  "idType": "NRIC",
+                  "idNumber": "S1234567A",
+                  "email": "jane.doe@example.com",
+                  "contactNumber": "+65 9123 4567",
+                  "address": {
+                    "line1": "1 Example Street",
+                    "line2": "#01-01",
+                    "postalCode": "123456",
+                    "country": "SG"
+                  }
+                },
+                "filer": {
+                  "name": "Jane Doe",
+                  "idType": "NRIC",
+                  "idNumber": "S1234567A",
+                  "email": "jane.doe@example.com",
+                  "contactNumber": "+65 9123 4567"
+                },
+                "company": {
+                  "companyName": "Example Pte Ltd",
+                  "uen": "201912345Z",
+                  "entityType": "PRIVATE_LIMITED",
+                  "registeredAddress": "1 Example Street, Singapore 123456"
+                },
+                "licence": {
+                  "licenceType": "TYPE_A",
+                  "licenceNumber": "LIC-000123",
+                  "validFrom": "2026-01-01",
+                  "validTo": "2027-01-01"
+                },
+                "edh": {
+                  "sensitiveField1": "dummy",
+                  "sensitiveField2": 123
+                }
+              },
+              "loginId": "S1234567A"
+            }
+          }
+        }
+      }
+    },
+    {
+      "edgeId": "e7",
+      "title": "LPS writes into DB",
+      "nodeSchemas": {
+        "PAYMENT-WEB": {
+          "request": {
+            "Description": "LPS updates the database with the payment and status update information",
+            "Tables updated": "Application, Statemachine"
+          }
+        }
       }
     }
-  }
+  ],
+  "nodeSchemas": {}
 }

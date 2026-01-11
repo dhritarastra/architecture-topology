@@ -452,6 +452,15 @@ export default function App() {
         setCurrentStepIndex(0);
     }, [selectedFlowId, viewMode]);
 
+    const getFlowSteps = (flow) => {
+        if (!flow) return [];
+        if (Array.isArray(flow.steps) && flow.steps.length) return flow.steps;
+
+        // fallback to old format (edges only)
+        const edges = Array.isArray(flow.edges) ? flow.edges : [];
+        return edges.map((edgeId) => ({ edgeId }));
+    };
+
     /* ------------------------------------------
        APPLY FLOW + STEP HIGHLIGHTING FOR API MODE
     ------------------------------------------- */
@@ -468,7 +477,9 @@ export default function App() {
         const flow = API_FLOWS.find((f) => f.id === selectedFlowId);
         if (!flow) return;
 
-        const flowEdgeIds = Array.isArray(flow.edges) ? flow.edges : [];
+        const steps = getFlowSteps(flow);
+        const flowEdgeIds = steps.map(s => s.edgeId).filter(Boolean);
+
         if (flowEdgeIds.length === 0) {
             // If flow has no edges, just grey everything else out
             cy.elements().addClass("off-flow");
@@ -564,26 +575,43 @@ export default function App() {
 
     }, [viewMode, selectedFlowId, currentStepIndex]);
 
-
     // Find active flow (for API mode)
     const activeFlow = useMemo(() => {
         if (viewMode !== "api" || !selectedFlowId) return null;
         return API_FLOWS.find((f) => f.id === selectedFlowId) || null;
     }, [viewMode, selectedFlowId]);
 
+    const activeSteps = useMemo(() => getFlowSteps(activeFlow), [activeFlow]);
+
+    const currentStep = useMemo(() => {
+        if (viewMode !== "api" || !activeSteps.length) return null;
+        const idx = Math.min(Math.max(currentStepIndex, 0), activeSteps.length - 1);
+        return activeSteps[idx] || null;
+    }, [viewMode, activeSteps, currentStepIndex]);
+
+    const currentEdgeId = currentStep?.edgeId || null;
+
+
     // Decide which schema to show for the selected node
     const getSchemaForSelectedNode = (nodeData) => {
         if (!nodeData) return {};
 
-        if (viewMode === "api" && activeFlow && activeFlow.nodeSchemas) {
-            const flowSchema = activeFlow.nodeSchemas[nodeData.id];
-            if (flowSchema) {
-                return flowSchema;
-            }
+        // STEP-specific schema wins
+        if (viewMode === "api" && currentStep?.nodeSchemas) {
+            const stepSchema = currentStep.nodeSchemas[nodeData.id];
+            if (stepSchema) return stepSchema;
         }
 
+        // fallback: flow-level schema
+        if (viewMode === "api" && activeFlow?.nodeSchemas) {
+            const flowSchema = activeFlow.nodeSchemas[nodeData.id];
+            if (flowSchema) return flowSchema;
+        }
+
+        // fallback: node’s own schema
         return nodeData.schema || {};
     };
+
 
     /* ------------------------------------------ */
     return (
@@ -678,12 +706,12 @@ export default function App() {
                 )}
 
                 {/* Step-by-step controls (only in API mode, when flow loaded) */}
-                {viewMode === "api" && activeFlow && activeFlow.edges && activeFlow.edges.length > 0 && (
+                {viewMode === "api" && activeFlow && activeFlow.edges && activeSteps.length > 0 && (
                     <div style={{marginBottom: 12}}>
                         <div style={{marginBottom: 4}}>
                             <strong>
-                                Step {Math.min(currentStepIndex + 1, activeFlow.edges.length)} of{" "}
-                                {activeFlow.edges.length}
+                                Step {Math.min(currentStepIndex + 1, activeSteps.length)} of{" "}
+                                {activeSteps.length}
                             </strong>
                         </div>
                         <div style={{display: "flex", gap: 8, marginBottom: 4}}>
@@ -707,20 +735,20 @@ export default function App() {
                             <button
                                 onClick={() =>
                                     setCurrentStepIndex((idx) =>
-                                        Math.min(activeFlow.edges.length - 1, idx + 1)
+                                        Math.min(activeSteps.length - 1, idx + 1)
                                     )
                                 }
-                                disabled={currentStepIndex >= activeFlow.edges.length - 1}
+                                disabled={currentStepIndex >= activeSteps.length - 1}
                                 style={{
                                     padding: "4px 8px",
                                     borderRadius: 4,
                                     border: "1px solid #d1d5db",
                                     background:
-                                        currentStepIndex >= activeFlow.edges.length - 1
+                                        currentStepIndex >= activeSteps.length - 1
                                             ? "#f3f4f6"
                                             : "#e5e7eb",
                                     cursor:
-                                        currentStepIndex >= activeFlow.edges.length - 1
+                                        currentStepIndex >= activeSteps.length - 1
                                             ? "not-allowed"
                                             : "pointer",
                                 }}
@@ -730,12 +758,12 @@ export default function App() {
                         </div>
                         <div style={{fontSize: 12, color: "#4b5563"}}>
                             {(() => {
-                                if (!activeFlow.edges.length) return null;
+                                if (!activeSteps.length) return null;
                                 const edgeId =
                                     activeFlow.edges[
                                         Math.min(
                                             currentStepIndex,
-                                            activeFlow.edges.length - 1
+                                            activeSteps.length - 1
                                         )
                                         ];
                                 const edgeEl = elements.find(
@@ -750,6 +778,17 @@ export default function App() {
                         </div>
                     </div>
                 )}
+
+                {viewMode === "api" && currentStep && (
+                    <div style={{ marginBottom: 12 }}>
+                        <h3 style={{ margin: "8px 0" }}>Step Details</h3>
+                        <div style={{ fontSize: 12, color: "#4b5563", marginBottom: 6 }}>
+                            {currentStep.title || `Edge: ${currentStep.edgeId}`}
+                        </div>
+                        <JsonView data={currentStep.nodeSchemas || {}} />
+                    </div>
+                )}
+
 
                 {/* Node details */}
                 {selectedNode ? (

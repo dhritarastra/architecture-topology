@@ -8,7 +8,7 @@
   { "id": "e6", "source": "SQS_FIFO", "target": "LPS", "label": "polls" },
   { "id": "e7", "source": "LPS", "target": "DB", "label": "writes"},
   { "id": "e8", "source": "DB", "target": "LPS", "label": "reads" },
-  { "id": "e9", "source": "MoP", "target": "DASHBOARD-WEB", "label": "Submits Payment Request"},
+  { "id": "e9", "source": "MoP", "target": "DASHBOARD-WEB", "label": "request"},
   { "id": "e10", "source": "DASHBOARD-WEB", "target": "DASHBOARD-BACKEND", "label": "request"},
   { "id": "e11", "source": "DASHBOARD-BACKEND", "target": "DASHBOARD-WEB", "label": "response" },
   { "id": "e12", "source": "DASHBOARD-WEB", "target": "PAYMENT-WEB", "label": "calls"},
@@ -20,7 +20,8 @@
   { "id": "e18", "source": "PAYMENT-SERVICE", "target": "STRIPE", "label": "request"},
   { "id": "e19", "source": "STRIPE", "target": "PAYMENT-SERVICE", "label": "response"},
   { "id": "e20", "source": "PAYMENT-SERVICE", "target": "DASHBOARD-BACKEND", "label": "response" },
-  { "id": "e21", "source": "DASHBOARD-BACKEND", "target": "LPA", "label": "Callback request"},
-  { "id": "e22", "source": "LPA", "target": "LPS", "label": "request"}
+  { "id": "e21", "source": "DASHBOARD-BACKEND", "target": "LPA", "label": "request"},
+  { "id": "e22", "source": "LPA", "target": "LPS", "label": "request"},
+  { "id": "e23", "source": "DASHBOARD-BACKEND", "target": "PAYMENT-SERVICE", "label": "request" }
 ]
 
