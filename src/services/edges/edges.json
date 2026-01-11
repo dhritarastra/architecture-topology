@@ -22,6 +22,14 @@
   { "id": "e20", "source": "PAYMENT-SERVICE", "target": "DASHBOARD-BACKEND", "label": "response" },
   { "id": "e21", "source": "DASHBOARD-BACKEND", "target": "LPA", "label": "request"},
   { "id": "e22", "source": "LPA", "target": "LPS", "label": "request"},
-  { "id": "e23", "source": "DASHBOARD-BACKEND", "target": "PAYMENT-SERVICE", "label": "request" }
+  { "id": "e23", "source": "DASHBOARD-BACKEND", "target": "PAYMENT-SERVICE", "label": "request" },
+
+
+
+  { "id": "u0", "source": "PAYMENT-SERVICE", "target": "DASHBOARD-BACKEND", "label": "response" },
+  { "id": "u1_5XX", "source": "DASHBOARD-BACKEND", "target": "LPA", "label": "Internal Server Error" },
+  { "id": "u2_4XX", "source": "DASHBOARD-BACKEND", "target": "LPA", "label": "Bad Request" },
+  { "id": "u3_5XX", "source": "LPA", "target": "LPS", "label": "Internal Server Error" },
+  { "id": "u4_4XX", "source": "LPA", "target": "LPS", "label": "Bad Request" }
 ]
 

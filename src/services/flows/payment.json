@@ -31,8 +31,9 @@
   ],
   "steps": [
     {
+      "id": "s1",
       "edgeId": "e9",
-      "title": "User submits payment request",
+      "title": "MoP submits payment request",
       "nodeSchemas": {
         "MoP": {
           "Description": "Member of Public initiates payment"
@@ -40,6 +41,7 @@
       }
     },
     {
+      "id": "s2",
       "edgeId": "e10",
       "title": "DASHBOARD-WEB calls DASHBOAED-BACKEND",
       "nodeSchemas": {
@@ -51,6 +53,7 @@
       }
     },
     {
+      "id": "s3",
       "edgeId": "e17",
       "title": "DASHBOARD-BACKEND calls Payment Service",
       "nodeSchemas": {
@@ -62,6 +65,7 @@
       }
     },
     {
+      "id": "s4",
       "edgeId": "e18",
       "title": "Payment Service calls Stripe (first time)",
       "nodeSchemas": {
@@ -73,6 +77,7 @@
       }
     },
     {
+      "id": "s5",
       "edgeId": "e19",
       "title": "STRIPE responds to Payment Service (first time)",
       "nodeSchemas": {
@@ -84,6 +89,7 @@
       }
     },
     {
+      "id": "s6",
       "edgeId": "e20",
       "title": "Payment Service responds to DASHBOARD-BACKEND (first time)",
       "nodeSchemas": {
@@ -95,6 +101,7 @@
       }
     },
     {
+      "id": "s7",
       "edgeId": "e11",
       "title": "DASHBOARD-BACKEND responds to DASHBOARD-WEB",
       "nodeSchemas": {
@@ -106,6 +113,7 @@
       }
     },
     {
+      "id": "s8",
       "edgeId": "e12",
       "title": "DASHBOARD-WEB redirects to PAYMENT-WEB",
       "nodeSchemas": {
@@ -117,6 +125,7 @@
       }
     },
     {
+      "id": "s9",
       "edgeId": "e13",
       "title": "PAYMENT-WEB calls PAYMENT-SERVICE",
       "nodeSchemas": {
@@ -128,6 +137,7 @@
       }
     },
     {
+      "id": "s10",
       "edgeId": "e18",
       "title": "PAYMENT-SERVICE calls STRIPE (second time)",
       "nodeSchemas": {
@@ -139,6 +149,7 @@
       }
     },
     {
+      "id": "s11",
       "edgeId": "e19",
       "title": "STRIPE responds to PAYMENT-SERVICE (second time)",
       "nodeSchemas": {
@@ -150,6 +161,7 @@
       }
     },
     {
+      "id": "s12",
       "edgeId": "e23",
       "title": "PAYMENT-SERVICE calls DASHBOARD-BACKEND (second time)",
       "nodeSchemas": {
@@ -161,8 +173,12 @@
       }
     },
     {
+      "id": "s13",
       "edgeId": "e21",
       "title": "DASHBOARD-BACKEND calls LPA",
+      "unhappy": [
+        { "edgeId": "u1_5XX", "title": "Backend Error" }
+      ],
       "nodeSchemas": {
         "DASHBOARD-BACKEND": {
           "request": {
@@ -241,13 +257,17 @@
       }
     },
     {
+      "id": "s14",
       "edgeId": "e22",
       "title": "LPA calls LPS",
+      "unhappy": [
+        { "edgeId": "u4_4XX", "title": "Bad Request / Validation Failed" }
+      ],
       "nodeSchemas": {
-        "PAYMENT-WEB": {
+        "LPA": {
           "request": {
             "Description": "LPA calls LPS in case of successful payment to update licence/application status accordingly",
-            "URI": "/update-status",
+            "URI": "/applications/{applicationId}/submitV2",
             "dummy-payload": {
               "paymentInfo": {
                 "paymentMode": "CARD",
@@ -311,6 +331,7 @@
       }
     },
     {
+      "id": "s15",
       "edgeId": "e7",
       "title": "LPS writes into DB",
       "nodeSchemas": {

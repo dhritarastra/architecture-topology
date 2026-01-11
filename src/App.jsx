@@ -244,6 +244,50 @@ const stylesheet = [
             width: 7,
         },
     },
+    // UNHAPPY (possible failure outcomes for *current* step)
+    {
+        selector: "node.flow-unhappy",
+        style: {
+            opacity: 0.75,
+            "text-opacity": 0.6,
+            "border-color": "#ef4444",
+            "border-width": 4,
+        },
+    },
+    {
+        selector: "edge.flow-unhappy",
+        style: {
+            opacity: 0.75,
+            "text-opacity": 0.55,
+            "line-style": "dashed",
+            "line-color": "#ef4444",
+            "target-arrow-color": "#ef4444",
+            width: 4,
+        },
+    },
+
+    // UNHAPPY (selected unhappy outcome - optional)
+    {
+        selector: "node.flow-unhappy-selected",
+        style: {
+            opacity: 1,
+            "text-opacity": 1,
+            "border-color": "#dc2626",
+            "border-width": 6,
+        },
+    },
+    {
+        selector: "edge.flow-unhappy-selected",
+        style: {
+            opacity: 1,
+            "text-opacity": 1,
+            "line-style": "dashed",
+            "line-color": "#dc2626",
+            "target-arrow-color": "#dc2626",
+            width: 6,
+        },
+    },
+
 
 ];
 
@@ -269,6 +313,9 @@ export default function App() {
     const isResizingRef = useRef(false);
     const startXRef = useRef(0);
     const startWidthRef = useRef(70);
+
+    const [showUnhappy, setShowUnhappy] = useState(true);
+
 
     /* ------------------------------------------
        BUILD ELEMENTS FROM JSON FILES
@@ -458,7 +505,7 @@ export default function App() {
 
         // fallback to old format (edges only)
         const edges = Array.isArray(flow.edges) ? flow.edges : [];
-        return edges.map((edgeId) => ({ edgeId }));
+        return edges.map((edgeId) => ({edgeId}));
     };
 
     /* ------------------------------------------
@@ -469,7 +516,7 @@ export default function App() {
         if (!cy) return;
 
         // Clear all step/flow classes first
-        cy.elements().removeClass("off-flow flow-next flow-done flow-current");
+        cy.elements().removeClass("off-flow flow-next flow-done flow-current flow-unhappy flow-unhappy-selected");
 
         // Only apply in API mode
         if (viewMode !== "api" || !selectedFlowId) return;
@@ -492,6 +539,11 @@ export default function App() {
         const doneEdgeIds = flowEdgeIds.slice(0, idx);      // previous edges
         const currentEdgeId = flowEdgeIds[idx];             // current edge
         const nextEdgeIds = flowEdgeIds.slice(idx + 1);     // future edges
+        const currentStep = steps[idx] || null;
+        const unhappyEdgeIds = showUnhappy
+            ? (Array.isArray(currentStep?.unhappy) ? currentStep.unhappy.map(u => u.edgeId).filter(Boolean) : [])
+            : [];
+
 
         // Helper to collect nodes touched by a list of edges
         const collectTouchedNodes = (edgeIds) => {
@@ -508,6 +560,7 @@ export default function App() {
             return nodeIds;
         };
 
+        const unhappyNodeIds = collectTouchedNodes(unhappyEdgeIds);
         const doneNodeIds = collectTouchedNodes(doneEdgeIds);
         const nextNodeIds = collectTouchedNodes(nextEdgeIds);
 
@@ -525,12 +578,20 @@ export default function App() {
         cy.elements().addClass("off-flow");
 
         // 2) Un-grey all edges/nodes that are part of the flow path (done/current/next)
-        const allRelevantEdgeIds = [...doneEdgeIds, currentEdgeId, ...nextEdgeIds].filter(Boolean);
+        const allRelevantEdgeIds = [
+            ...doneEdgeIds,
+            currentEdgeId,
+            ...nextEdgeIds,
+            ...unhappyEdgeIds,
+        ].filter(Boolean);
+
         const allRelevantNodeIds = new Set([
             ...doneNodeIds,
             ...currentNodeIds,
             ...nextNodeIds,
+            ...unhappyNodeIds,
         ]);
+
 
         cy.edges().filter((e) => allRelevantEdgeIds.includes(e.id()))
             .removeClass("off-flow");
@@ -569,11 +630,21 @@ export default function App() {
             const e = cy.getElementById(currentEdgeId);
             if (e && e.length > 0) {
                 // center on the edge (you can also center on nodes if you prefer)
-                cy.animate({ center: { eles: e }, duration: 200 });
+                cy.animate({center: {eles: e}, duration: 200});
             }
         }
 
-    }, [viewMode, selectedFlowId, currentStepIndex]);
+        // Unhappy (possible outcomes for current step)
+        if (unhappyEdgeIds.length) {
+            cy.edges().filter((e) => unhappyEdgeIds.includes(e.id()))
+                .addClass("flow-unhappy");
+
+            cy.nodes().filter((n) => unhappyNodeIds.has(n.id()))
+                .addClass("flow-unhappy");
+        }
+
+
+    }, [viewMode, selectedFlowId, currentStepIndex, showUnhappy]);
 
     // Find active flow (for API mode)
     const activeFlow = useMemo(() => {
@@ -759,33 +830,52 @@ export default function App() {
                         <div style={{fontSize: 12, color: "#4b5563"}}>
                             {(() => {
                                 if (!activeSteps.length) return null;
-                                const edgeId =
-                                    activeFlow.edges[
-                                        Math.min(
-                                            currentStepIndex,
-                                            activeSteps.length - 1
-                                        )
-                                        ];
-                                const edgeEl = elements.find(
-                                    (el) => el.data && el.data.id === edgeId
-                                );
+
+                                const step = activeSteps[Math.min(currentStepIndex, activeSteps.length - 1)];
+                                const edgeId = step?.edgeId;
+
+                                if (!edgeId) return null;
+
+                                const edgeEl = elements.find((el) => el.data && el.data.id === edgeId);
                                 if (!edgeEl) return `Edge: ${edgeId}`;
+
                                 const {source, target, label} = edgeEl.data;
-                                return `Step: ${source} → ${target}${
-                                    label ? ` (${label})` : ""
-                                }`;
+                                return `Step: ${source} → ${target}${label ? ` (${label})` : ""}`;
                             })()}
                         </div>
                     </div>
                 )}
 
                 {viewMode === "api" && currentStep && (
-                    <div style={{ marginBottom: 12 }}>
-                        <h3 style={{ margin: "8px 0" }}>Step Details</h3>
-                        <div style={{ fontSize: 12, color: "#4b5563", marginBottom: 6 }}>
+                    <div style={{marginBottom: 12}}>
+                        <h3 style={{margin: "8px 0"}}>Step Details</h3>
+                        <div style={{fontSize: 12, color: "#4b5563", marginBottom: 6}}>
                             {currentStep.title || `Edge: ${currentStep.edgeId}`}
                         </div>
-                        <JsonView data={currentStep.nodeSchemas || {}} />
+
+                        {Array.isArray(currentStep.unhappy) && currentStep.unhappy.length > 0 && (
+                            <div style={{marginTop: 8}}>
+                                <div style={{fontWeight: 600, marginBottom: 6}}>Unhappy paths at this step</div>
+                                <ul style={{margin: 0, paddingLeft: 18, fontSize: 12, color: "#4b5563"}}>
+                                    {currentStep.unhappy.map((u) => (
+                                        <li key={u.edgeId}>
+                                            {u.title || u.edgeId} <span style={{opacity: 0.7}}>({u.edgeId})</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+
+                        <label style={{display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12}}>
+                            <input type="checkbox" checked={showUnhappy}
+                                   onChange={(e) => setShowUnhappy(e.target.checked)}/>
+                            Show unhappy paths
+                        </label>
+
+
+                        <div style={{marginTop: 10}}>
+                            <JsonView data={currentStep.nodeSchemas || {}}/>
+                        </div>
                     </div>
                 )}
 
