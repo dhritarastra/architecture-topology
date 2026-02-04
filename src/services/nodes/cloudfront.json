@@ -1,7 +1,7 @@
 [
   {
-    "id": "PAYMENT-WEB",
-    "label": "PAYMENT-WEB",
+    "id": "payment-web",
+    "label": "payment-web",
     "repo": "molb-payment-web",
     "type": "cloudfront",
     "schema": {
@@ -9,12 +9,12 @@
     }
   },
   {
-    "id": "DASHBOARD-WEB",
-    "label": "DASHBOARD-WEB",
+    "id": "dashboard-web",
+    "label": "dashboard-web",
     "repo": "molb-dashboard-web",
     "type": "cloudfront",
     "schema": {
-      "description": "Cloudfront used for hosting the dashboard website, powered by DASHBOARD-BACKEND and aggregated with CloudFront as a CDN."
+      "description": "Cloudfront used for hosting the dashboard website, powered by dashboard-backend and aggregated with CloudFront as a CDN."
     }
   }
 ]

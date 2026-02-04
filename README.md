@@ -5,7 +5,7 @@ An interactive web application for visualizing system architecture and API flows
 ## Overview
 
 This tool provides:
-- **Infrastructure View** — Visual representation of AWS services (ECS, RDS, DynamoDB, SQS, etc.) and their connections
+- **Infrastructure View** — Visual representation of AWS services (ECS, RDS, dynamo-db, SQS, etc.) and their connections
 - **API Flow View** — Step-by-step visualization of API request flows with happy/unhappy path exploration
 - **Interactive Graph** — Click nodes to inspect details, drag to reposition, zoom and pan
 

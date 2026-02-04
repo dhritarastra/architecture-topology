@@ -80,7 +80,7 @@ const stylesheet = [
         },
     },
     {
-        selector: "node[type='dynamodb']",
+        selector: "node[type='dynamo-db']",
         style: {
             shape: "ellipse",
             width: 70,
@@ -125,6 +125,14 @@ const stylesheet = [
             height: 70,
             "background-opacity": 0,
             "background-image": "url(/aws-icons/CloudFront.svg)",
+            "background-fit": "cover",
+        },
+    },
+    {
+        selector: "node[type='config']",
+        style: {
+            "background-opacity": 0,
+            "background-image": "url(/aws-icons/Config.svg)",
             "background-fit": "cover",
         },
     },
@@ -844,29 +852,6 @@ export default function App() {
         return activeSteps[idx] || null;
     }, [viewMode, activeSteps, currentStepIndex]);
 
-    const currentEdgeId = currentStep?.edgeId || null;
-
-
-    // Decide which schema to show for the selected node
-    const getSchemaForSelectedNode = (nodeData) => {
-        if (!nodeData) return {};
-
-        // STEP-specific schema wins
-        if (viewMode === "api" && currentStep?.nodeSchemas) {
-            const stepSchema = currentStep.nodeSchemas[nodeData.id];
-            if (stepSchema) return stepSchema;
-        }
-
-        // fallback: flow-level schema
-        if (viewMode === "api" && activeFlow?.nodeSchemas) {
-            const flowSchema = activeFlow.nodeSchemas[nodeData.id];
-            if (flowSchema) return flowSchema;
-        }
-
-        // fallback: node's own schema
-        return nodeData.schema || {};
-    };
-
     /* ------------------------------------------
        PHASE 4: SEARCH FUNCTIONALITY
     ------------------------------------------- */
@@ -1486,10 +1471,11 @@ export default function App() {
                                     }}
                                 >
                                     <option value="all">All Layers</option>
+                                    <option value="presentation">Presentation</option>
                                     <option value="application">Application</option>
                                     <option value="data">Data</option>
+                                    <option value="cron-job">Cron-Job</option>
                                     <option value="external">External</option>
-                                    <option value="presentation">Presentation</option>
                                 </select>
                             </div>
 
@@ -1585,12 +1571,7 @@ export default function App() {
                 {/* Step-by-step controls (only in API mode, when flow loaded) */}
                 {viewMode === "api" && activeFlow && activeFlow.edges && activeSteps.length > 0 && (
                     <div style={{marginBottom: 12}}>
-                        <div style={{marginBottom: 4}}>
-                            <strong>
-                                Step {Math.min(currentStepIndex + 1, activeSteps.length)} of{" "}
-                                {activeSteps.length}
-                            </strong>
-                        </div>
+
                         <div style={{display: "flex", gap: 8, marginBottom: 4}}>
                             <button
                                 onClick={() =>
@@ -1862,7 +1843,7 @@ export default function App() {
 
                         {/* Tab Navigation */}
                         <div style={{display: "flex", gap: 4, marginBottom: 12, borderBottom: "2px solid #e5e7eb"}}>
-                            {["overview", "infrastructure", "api", "dependencies"].map(tab => (
+                            {["overview", "api", "dependencies"].map(tab => (
                                 <button
                                     key={tab}
                                     onClick={() => setInfraDetailTab(tab)}
@@ -1903,30 +1884,6 @@ export default function App() {
                                                 fontSize: 11
                                             }}>{selectedNode.layer}</span>
                                             {selectedNode.tier && <span> / {selectedNode.tier}</span>}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* Infrastructure Tab */}
-                            {infraDetailTab === "infrastructure" && selectedNode.infrastructure && (
-                                <div>
-                                    {selectedNode.infrastructure.aws && (
-                                        <div style={{marginBottom: 16}}>
-                                            <strong style={{display: "block", marginBottom: 6, color: "#0f766e"}}>AWS Configuration</strong>
-                                            <JsonView data={selectedNode.infrastructure.aws} />
-                                        </div>
-                                    )}
-                                    {selectedNode.infrastructure.networking && (
-                                        <div style={{marginBottom: 16}}>
-                                            <strong style={{display: "block", marginBottom: 6, color: "#0f766e"}}>Networking</strong>
-                                            <JsonView data={selectedNode.infrastructure.networking} />
-                                        </div>
-                                    )}
-                                    {selectedNode.infrastructure.autoscaling && (
-                                        <div style={{marginBottom: 16}}>
-                                            <strong style={{display: "block", marginBottom: 6, color: "#0f766e"}}>Autoscaling</strong>
-                                            <JsonView data={selectedNode.infrastructure.autoscaling} />
                                         </div>
                                     )}
                                 </div>
@@ -2027,12 +1984,6 @@ export default function App() {
                                 </div>
                             )}
 
-                            {/* Fallback for nodes without infrastructure data */}
-                            {!selectedNode.infrastructure && infraDetailTab === "infrastructure" && (
-                                <div style={{color: "#6b7280", fontStyle: "italic"}}>
-                                    No infrastructure data available for this node.
-                                </div>
-                            )}
                         </div>
                     </div>
                 ) : (

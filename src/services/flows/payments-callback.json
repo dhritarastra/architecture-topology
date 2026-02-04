@@ -1,0 +1,740 @@
+{
+  "id": "f1",
+  "label": "Payment Flow (Interactive)",
+  "description": "Enhanced payment flow with outcome-based branching",
+  "nodes": [
+    "MoP",
+    "dashboard-backend",
+    "dashboard-web",
+    "payment-web",
+    "payment-service",
+    "stripe",
+    "licence-backend",
+    "licence-service",
+    "DB"
+  ],
+  "edges": [
+    "e9",
+    "e10",
+    "e17",
+    "e18",
+    "e19",
+    "e20",
+    "e11",
+    "e12",
+    "e13",
+    "e23",
+    "e21",
+    "e22",
+    "e7"
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "edgeId": "e9",
+      "title": "MoP submits payment request",
+      "description": "Member of public initiates payment through the web interface",
+      "outcomes": [
+        {
+          "id": "success",
+          "label": "✓ Success",
+          "type": "happy",
+          "nextStepId": "s2",
+          "description": "User successfully submits payment request",
+          "request": {
+            "url": "https://dashboard.example.com/payment",
+            "method": "GET"
+          },
+          "response": {
+            "status": 200,
+            "body": "Payment form loaded"
+          }
+        }
+      ]
+    },
+    {
+      "id": "s2",
+      "edgeId": "e10",
+      "title": "dashboard-web calls dashboard-backend",
+      "description": "Frontend requests backend to create payment reference",
+      "outcomes": [
+        {
+          "id": "success",
+          "label": "✓ Success (200)",
+          "type": "happy",
+          "nextStepId": "s3",
+          "description": "Backend processes request successfully",
+          "request": {
+            "url": "https://dashboard-backend.example.com/api/v1/payments/init",
+            "method": "POST",
+            "headers": {
+              "Authorization": "Bearer eyJ...",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "userId": "user_123",
+              "amount": 120.50,
+              "currency": "SGD",
+              "description": "Licence application payment"
+            }
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "paymentReferenceId": "PR-2026-000001",
+              "status": "INITIATED"
+            }
+          }
+        },
+        {
+          "id": "validation_error",
+          "label": "✗ Validation Error (400)",
+          "type": "unhappy",
+          "nextStepId": "s2_error",
+          "description": "Invalid request parameters",
+          "request": {
+            "url": "https://dashboard-backend.example.com/api/v1/payments/init",
+            "method": "POST",
+            "body": {
+              "userId": "user_123",
+              "amount": -10,
+              "currency": "INVALID"
+            }
+          },
+          "response": {
+            "status": 400,
+            "body": {
+              "error": "VALIDATION_ERROR",
+              "message": "Amount must be positive",
+              "field": "amount"
+            }
+          }
+        },
+        {
+          "id": "server_error",
+          "label": "✗ Server Error (500)",
+          "type": "unhappy",
+          "nextStepId": "s2_error",
+          "description": "Backend service unavailable",
+          "response": {
+            "status": 500,
+            "body": {
+              "error": "INTERNAL_SERVER_ERROR",
+              "message": "Database connection failed"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "s2_error",
+      "edgeId": "e11",
+      "title": "Error returned to user",
+      "description": "Dashboard shows error message",
+      "isErrorHandler": true,
+      "outcomes": [
+        {
+          "id": "retry",
+          "label": "↻ User Retries",
+          "type": "recovery",
+          "nextStepId": "s2",
+          "description": "User fixes input and retries"
+        },
+        {
+          "id": "abort",
+          "label": "✗ Flow Aborted",
+          "type": "terminal",
+          "nextStepId": null,
+          "description": "User abandons payment"
+        }
+      ]
+    },
+    {
+      "id": "s3",
+      "edgeId": "e17",
+      "title": "dashboard-backend calls Payment Service",
+      "description": "Create payment reference with metadata",
+      "outcomes": [
+        {
+          "id": "success",
+          "label": "✓ Success (200)",
+          "type": "happy",
+          "nextStepId": "s4",
+          "description": "Payment reference created successfully",
+          "request": {
+            "url": "https://payment-service.example.com/api/v1/payment-references",
+            "method": "POST",
+            "headers": {
+              "Authorization": "Bearer eyJ...",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "paymentReferenceId": "PR-2026-000001",
+              "domainReference": "DR-000001",
+              "amount": 120.50,
+              "currency": "SGD",
+              "metadata": "eyJlbmNyeXB0ZWQiOiJkYXRhIn0="
+            }
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "id": "pr_abc123",
+              "status": "CREATED",
+              "jweToken": "eyJhbGc..."
+            }
+          }
+        },
+        {
+          "id": "timeout",
+          "label": "✗ Timeout",
+          "type": "unhappy",
+          "nextStepId": "s3_timeout",
+          "description": "Request timeout after 30s",
+          "response": {
+            "status": 504,
+            "body": {
+              "error": "GATEWAY_TIMEOUT",
+              "message": "Payment service did not respond in time"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "s3_timeout",
+      "edgeId": "e17",
+      "title": "Payment service call timed out",
+      "description": "Request timed out, therefore terminated",
+      "isRetryHandler": false,
+      "outcomes": [
+        {
+          "id": "Timeout",
+          "label": "✓ Request Failed",
+          "type": "terminal",
+          "nextStepId": null,
+          "description": "Request Failed"
+        }
+      ]
+    },
+    {
+      "id": "s4",
+      "edgeId": "e18",
+      "title": "Payment Service calls stripe (create customer/get customer account)",
+      "description": "Create/get stripe customer for payment processing",
+      "outcomes": [
+        {
+          "id": "success",
+          "label": "✓ Customer Created/Fetched (200)",
+          "type": "happy",
+          "nextStepId": "s5",
+          "description": "stripe customer created/fetched successfully",
+          "request": {
+            "url": "https://api.stripe.com/v1/customers",
+            "method": "POST",
+            "headers": {
+              "Authorization": "Bearer sk_test_...",
+              "Content-Type": "application/x-www-form-urlencoded"
+            },
+            "body": {
+              "email": "user@example.com",
+              "metadata": {
+                "paymentReferenceId": "PR-2026-000001",
+                "domainReference": "DR-000001"
+              }
+            }
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "id": "cus_123abc",
+              "object": "customer",
+              "email": "user@example.com",
+              "created": 1673456789
+            }
+          }
+        },
+        {
+          "id": "invalid_email",
+          "label": "✗ Invalid Email (400)",
+          "type": "unhappy",
+          "nextStepId": "s4_abort",
+          "description": "stripe rejected due to invalid email",
+          "response": {
+            "status": 400,
+            "body": {
+              "error": {
+                "type": "invalid_request_error",
+                "message": "Invalid email address",
+                "param": "email"
+              }
+            }
+          }
+        },
+        {
+          "id": "stripe_down",
+          "label": "✗ stripe Unavailable (503)",
+          "type": "unhappy",
+          "nextStepId": "s4_abort",
+          "description": "stripe service temporarily unavailable",
+          "response": {
+            "status": 503,
+            "body": {
+              "error": {
+                "type": "api_error",
+                "message": "Service temporarily unavailable"
+              }
+            }
+          }
+        },
+        {
+          "id": "rate_limit",
+          "label": "✗ Rate Limited (429)",
+          "type": "unhappy",
+          "nextStepId": "s4_abort",
+          "description": "Too many requests to stripe",
+          "response": {
+            "status": 429,
+            "body": {
+              "error": {
+                "type": "rate_limit_error",
+                "message": "Too many requests"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "s4_abort",
+      "edgeId": "e18",
+      "title": "Stripe service call failed",
+      "description": "Stripe service call failed, therefore request terminated",
+      "isRetryHandler": false,
+      "outcomes": [
+        {
+          "id": "Request_Failed",
+          "label": "✓ Request Failed",
+          "type": "terminal",
+          "nextStepId": null,
+          "description": "Request Failed"
+        }
+      ]
+    },
+    {
+      "id": "s5",
+      "edgeId": "e19",
+      "title": "stripe responds with customer ID",
+      "description": "Customer creation response from stripe",
+      "outcomes": [
+        {
+          "id": "success",
+          "label": "✓ Success",
+          "type": "happy",
+          "nextStepId": "s6",
+          "response": {
+            "status": 200,
+            "body": {
+              "customerId": "cus_123abc",
+              "clientSecret": "pi_123_secret_456"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "s6",
+      "edgeId": "e20",
+      "title": "Payment Service responds to Dashboard",
+      "description": "Return JWE token for frontend",
+      "outcomes": [
+        {
+          "id": "success",
+          "label": "✓ Success",
+          "type": "happy",
+          "nextStepId": "s7",
+          "response": {
+            "status": 200,
+            "body": {
+              "jweToken": "eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ...",
+              "expiresAt": "2026-01-14T04:20:51Z"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "s7",
+      "edgeId": "e11",
+      "title": "Dashboard Backend responds to Frontend",
+      "outcomes": [
+        {
+          "id": "success",
+          "label": "✓ Success",
+          "type": "happy",
+          "nextStepId": "s8"
+        }
+      ]
+    },
+    {
+      "id": "s8",
+      "edgeId": "e12",
+      "title": "Redirect to Payment UI with the token",
+      "outcomes": [
+        {
+          "id": "success",
+          "label": "✓ Redirected",
+          "type": "happy",
+          "nextStepId": "s9"
+        }
+      ]
+    },
+    {
+      "id": "s9",
+      "edgeId": "e13",
+      "title": "Payment Portal calls Payment Service",
+      "description": "Submit payment with stripe token",
+      "outcomes": [
+        {
+          "id": "success",
+          "label": "✓ Request Accepted (200)",
+          "type": "happy",
+          "nextStepId": "s10",
+          "request": {
+            "url": "https://payment-service.example.com/api/v1/payments/process",
+            "method": "POST",
+            "body": {
+              "paymentMethodId": "pm_123abc",
+              "jweToken": "eyJ..."
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "s10",
+      "edgeId": "e18",
+      "title": "Payment Service creates Payment Intent",
+      "description": "Process payment through stripe",
+      "outcomes": [
+        {
+          "id": "success",
+          "label": "✓ Payment Success",
+          "type": "happy",
+          "nextStepId": "s11",
+          "request": {
+            "url": "https://api.stripe.com/v1/payment_intents",
+            "method": "POST",
+            "body": {
+              "amount": 12050,
+              "currency": "sgd",
+              "customer": "cus_123abc",
+              "payment_method": "pm_123abc",
+              "confirm": true
+            }
+          }
+        },
+        {
+          "id": "card_declined",
+          "label": "✗ Card Declined",
+          "type": "unhappy",
+          "nextStepId": "s10_declined",
+          "description": "Payment declined by bank",
+          "response": {
+            "status": 402,
+            "body": {
+              "error": {
+                "code": "card_declined",
+                "decline_code": "insufficient_funds",
+                "message": "Your card has insufficient funds"
+              }
+            }
+          }
+        },
+        {
+          "id": "authentication_required",
+          "label": "⚠ 3DS Required",
+          "type": "unhappy",
+          "nextStepId": "s10_3ds",
+          "description": "Additional authentication needed",
+          "response": {
+            "status": 200,
+            "body": {
+              "status": "requires_action",
+              "next_action": {
+                "type": "redirect_to_url",
+                "url": "https://authenticate.stripe.com/..."
+              }
+            }
+          }
+        },
+        {
+          "id": "fraud_detected",
+          "label": "✗ Fraud Detected",
+          "type": "unhappy",
+          "nextStepId": "s10_fraud",
+          "description": "Payment blocked by fraud detection",
+          "response": {
+            "status": 402,
+            "body": {
+              "error": {
+                "code": "card_declined",
+                "decline_code": "fraudulent",
+                "message": "Payment declined due to suspected fraud"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "s10_declined",
+      "title": "Handle Payment Decline",
+      "isErrorHandler": true,
+      "outcomes": [
+        {
+          "id": "retry_different_card",
+          "label": "↻ Try Different Card",
+          "type": "recovery",
+          "nextStepId": "s9"
+        },
+        {
+          "id": "abort",
+          "label": "✗ Cancel Payment",
+          "type": "terminal",
+          "nextStepId": null
+        }
+      ]
+    },
+    {
+      "id": "s10_3ds",
+      "title": "3D Secure Authentication",
+      "outcomes": [
+        {
+          "id": "authenticated",
+          "label": "✓ Authentication Success",
+          "type": "happy",
+          "nextStepId": "s11"
+        },
+        {
+          "id": "failed",
+          "label": "✗ Authentication Failed",
+          "type": "unhappy",
+          "nextStepId": "s10_declined"
+        }
+      ]
+    },
+    {
+      "id": "s10_fraud",
+      "title": "Fraud Review Required",
+      "isErrorHandler": true,
+      "outcomes": [
+        {
+          "id": "manual_review",
+          "label": "→ Escalate to Manual Review",
+          "type": "terminal",
+          "nextStepId": null,
+          "description": "Requires support team intervention"
+        }
+      ]
+    },
+    {
+      "id": "s11",
+      "edgeId": "e19",
+      "title": "stripe confirms payment",
+      "outcomes": [
+        {
+          "id": "success",
+          "label": "✓ Payment Confirmed",
+          "type": "happy",
+          "nextStepId": "s12",
+          "response": {
+            "status": 200,
+            "body": {
+              "id": "pi_123abc",
+              "status": "succeeded",
+              "amount": 12050,
+              "currency": "sgd"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "s12",
+      "edgeId": "e23",
+      "title": "Payment Service notifies Dashboard Backend",
+      "outcomes": [
+        {
+          "id": "success",
+          "label": "✓ Success",
+          "type": "happy",
+          "nextStepId": "s13"
+        }
+      ]
+    },
+    {
+      "id": "s13",
+      "edgeId": "e21",
+      "title": "Dashboard Backend calls licence-backend",
+      "description": "Payment callback to Licence Processing Application",
+      "outcomes": [
+        {
+          "id": "success",
+          "label": "✓ Success (200)",
+          "type": "happy",
+          "nextStepId": "s14",
+          "request": {
+            "url": "https://licence-backend.example.com/api/payments/callback",
+            "method": "POST",
+            "body": {
+              "paymentReferenceNumber": "PRN-2026-000001",
+              "status": "SUCCESS",
+              "amount": 120.50,
+              "transactionId": "pi_123abc"
+            }
+          }
+        },
+        {
+          "id": "server_error",
+          "label": "✗ licence-backend Server Error (500)",
+          "type": "unhappy",
+          "nextStepId": "s13_retry",
+          "response": {
+            "status": 500,
+            "body": {
+              "error": "INTERNAL_ERROR",
+              "message": "Failed to process callback"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "s13_retry",
+      "edgeId": "e21",
+      "title": "Retry licence-backend callback (3 retries only)",
+      "isRetryHandler": true,
+      "outcomes": [
+        {
+          "id": "success",
+          "label": "✓ Success within 3 retries",
+          "type": "happy",
+          "nextStepId": "s14"
+        },
+        {
+          "id": "failed",
+          "label": "✗ Send to DLQ",
+          "type": "terminal",
+          "nextStepId": null,
+          "description": "Message sent to Dead Letter Queue for manual processing"
+        }
+      ]
+    },
+    {
+      "id": "s14",
+      "edgeId": "e22",
+      "title": "licence-backend calls licence-service",
+      "description": "Update licence/application status",
+      "outcomes": [
+        {
+          "id": "success",
+          "label": "✓ Success (200)",
+          "type": "happy",
+          "nextStepId": "s15",
+          "request": {
+            "url": "https://licence-service.example.com/api/applications/APP-123/submit",
+            "method": "POST",
+            "body": {
+              "applicationId": "APP-123",
+              "paymentInfo": {
+                "status": "PAID",
+                "amount": 120.50
+              }
+            }
+          }
+        },
+        {
+          "id": "validation_failed",
+          "label": "✗ Validation Failed (400)",
+          "type": "unhappy",
+          "nextStepId": "s14_abort",
+          "description": "Application data invalid",
+          "response": {
+            "status": 400,
+            "body": {
+              "error": "VALIDATION_ERROR",
+              "message": "Application not in valid state for payment"
+            }
+          }
+        },
+        {
+          "id": "server_error",
+          "label": "✗ licence-service Server Error (500)",
+          "type": "unhappy",
+          "nextStepId": "s14_abort",
+          "response": {
+            "status": 500,
+            "body": {
+              "error": "INTERNAL_ERROR",
+              "message": "Failed to process callback"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "s14_abort",
+      "edgeId": "e22",
+      "title": "licence-service call failed",
+      "description": "licence-service call failed, therefore request terminated",
+      "isRetryHandler": false,
+      "outcomes": [
+        {
+          "id": "Request_Failed",
+          "label": "✓ Request Failed",
+          "type": "terminal",
+          "nextStepId": null,
+          "description": "Request Failed"
+        }
+      ]
+    },
+    {
+      "id": "s15",
+      "edgeId": "e7",
+      "title": "licence-service updates database",
+      "outcomes": [
+        {
+          "id": "success",
+          "label": "✓ DB Updated",
+          "type": "happy",
+          "nextStepId": null,
+          "description": "Payment flow completed successfully"
+        },
+        {
+          "id": "failure",
+          "label": "✓ DB Update failed",
+          "type": "unhappy",
+          "nextStepId": "s15_abort",
+          "description": "Payment flow unsuccessful"
+        }
+      ]
+    },
+    {
+      "id": "s15_abort",
+      "edgeId": "e7",
+      "title": "DB update failed",
+      "description": "DB update failed, therefore request terminated",
+      "isRetryHandler": false,
+      "outcomes": [
+        {
+          "id": "Request_Failed",
+          "label": "✓ Request Failed",
+          "type": "terminal",
+          "nextStepId": null,
+          "description": "Request Failed"
+        }
+      ]
+    }
+  ]
+}

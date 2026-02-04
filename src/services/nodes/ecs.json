@@ -1,7 +1,7 @@
 [
   {
-    "id": "SU-CRON",
-    "label": "SU-CRON",
+    "id": "status-update-job",
+    "label": "status-update-job",
     "repo": "molb-status-update-job",
     "type": "ecs",
     "schema": {
@@ -15,8 +15,8 @@
     }
   },
   {
-    "id": "LPS",
-    "label": "LPS",
+    "id": "licence-service",
+    "label": "licence-service",
     "repo": "molb-licence-service",
     "type": "ecs",
     "schema": {
@@ -27,8 +27,8 @@
     }
   },
   {
-    "id": "LPA",
-    "label": "LPA",
+    "id": "licence-backend",
+    "label": "licence-backend",
     "repo": "molb-licence-backend",
     "type": "ecs",
     "schema": {
@@ -39,8 +39,8 @@
     }
   },
   {
-    "id": "PAYMENT-SERVICE",
-    "label": "PAYMENT-SERVICE",
+    "id": "payment-service",
+    "label": "payment-service",
     "repo": "molb-payment",
     "type": "ecs",
     "schema": {
@@ -51,8 +51,8 @@
     }
   },
   {
-    "id": "DASHBOARD-BACKEND",
-    "label": "DASHBOARD-BACKEND",
+    "id": "dashboard-backend",
+    "label": "dashboard-backend",
     "repo": "molb-dashboard-backend",
     "type": "ecs",
     "schema": {
@@ -63,8 +63,8 @@
     }
   },
   {
-    "id": "STRIPE",
-    "label": "STRIPE",
+    "id": "stripe",
+    "label": "stripe",
     "repo": "",
     "type": "ecs",
     "schema": {

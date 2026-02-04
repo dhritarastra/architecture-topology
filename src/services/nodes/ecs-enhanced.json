@@ -1,0 +1,136 @@
+[
+  {
+    "id": "payment-service",
+    "label": "payment-service",
+    "repo": "molb-payment",
+    "type": "ecs",
+    "layer": "application",
+    "tier": "backend",
+    "schema": {
+      "entity": {
+        "id": "string",
+        "state": "string"
+      }
+    },
+    "dependencies": {
+      "internal": ["dashboard-backend", "licence-backend"],
+      "external": ["stripe", "PAYMENT-DB"],
+      "databases": ["PAYMENT-DB"],
+      "queues": ["payment-queue"]
+    },
+    "api": {
+      "baseUrl": "https://payment.internal.example.com",
+      "version": "v1",
+      "protocol": "REST",
+      "authentication": "JWT",
+      "endpoints": [
+        {
+          "path": "/v1/payment-references",
+          "method": "POST",
+          "description": "Create payment reference"
+        },
+        {
+          "path": "/v1/payments/process",
+          "method": "POST",
+          "description": "Process payment"
+        }
+      ],
+      "documentation": "https://wiki.internal/payment-service"
+    }
+  },
+  {
+    "id": "dashboard-backend",
+    "label": "dashboard-backend",
+    "repo": "molb-dashboard-backend",
+    "type": "ecs",
+    "layer": "application",
+    "tier": "backend",
+    "schema": {
+      "entity": {
+        "id": "string",
+        "state": "string"
+      }
+    },
+    "dependencies": {
+      "internal": ["payment-service", "licence-backend"],
+      "databases": ["DASHBOARD-DB"]
+    }
+  },
+  {
+    "id": "licence-backend",
+    "label": "licence-backend",
+    "repo": "molb-licence-backend",
+    "type": "ecs",
+    "layer": "application",
+    "tier": "backend",
+    "schema": {
+      "entity": {
+        "id": "string",
+        "state": "string"
+      }
+    },
+    "dependencies": {
+      "internal": ["licence-service"],
+      "databases": ["LICENCE-DB"]
+    }
+  },
+  {
+    "id": "licence-service",
+    "label": "licence-service",
+    "repo": "molb-licence-service",
+    "type": "ecs",
+    "layer": "application",
+    "tier": "service",
+    "schema": {
+      "entity": {
+        "id": "string",
+        "state": "string"
+      }
+    },
+    "dependencies": {
+      "databases": ["DB"],
+      "queues": ["licence-queue"]
+    }
+  },
+  {
+    "id": "stripe",
+    "label": "stripe",
+    "repo": "",
+    "type": "ecs",
+    "layer": "external",
+    "tier": "third-party",
+    "schema": {
+      "entity": {
+        "id": "string",
+        "state": "string"
+      }
+    },
+    "api": {
+      "baseUrl": "https://api.stripe.com",
+      "version": "2023-10-16",
+      "documentation": "https://stripe.com/docs/api"
+    }
+  },
+  {
+    "id": "status-update-job",
+    "label": "status-update-job",
+    "repo": "molb-status-update-job",
+    "type": "ecs",
+    "layer": "cron-job",
+    "tier": "worker",
+    "schema": {
+      "request": {
+        "id": "string",
+        "timestamp": "string"
+      },
+      "response": {
+        "status": "string"
+      }
+    },
+    "dependencies": {
+      "internal": ["licence-service"],
+      "databases": ["dynamo-db"],
+      "external": ["apex"]
+    }
+  }
+]

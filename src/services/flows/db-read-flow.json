@@ -1,10 +1,10 @@
 {
-  "id": "db-to-lps-read",
-  "label": "DB → LPS (read refresh)",
-  "nodes": ["DB", "LPS"],
+  "id": "f4",
+  "label": "DB → licence-service (read refresh)",
+  "nodes": ["DB", "licence-service"],
   "edges": ["e4"],
   "nodeSchemas": {
-    "LPS": {
+    "licence-service": {
       "request": {
         "licenceId": "string",
         "includeAudit": "boolean"

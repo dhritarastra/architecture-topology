@@ -1,10 +1,10 @@
 {
-  "id": "f1",
+  "id": "f2",
   "label": "Status Update Flow",
-  "nodes": ["SU-EventBridge","APEX","DYNAMODB","SU-CRON", "SQS_FIFO", "LPS", "DB"],
-  "edges": ["e0", "e2", "e1", "e3", "e4", "e5", "e6", "e8", "e7"],
+  "nodes": ["su-eventbridge","apex","dynamo-db","status-update-job", "SQS_FIFO", "licence-service", "DB"],
+  "edges": ["e0", "e2", "e1", "e3", "e4", "e5", "e6", "e8", "e7", "e24", "e7"],
   "nodeSchemas": {
-    "SU-CRON": {
+    "status-update-job": {
       "request": {
         "cronJobId": "string",
         "scheduledAt": "string"
@@ -14,7 +14,7 @@
         "queuedMessages": "number"
       }
     },
-    "LPS": {
+    "licence-service": {
       "request": {
         "licenceId": "string",
         "channel": "string"
@@ -24,5 +24,292 @@
         "state": "string"
       }
     }
-  }
+  },
+  "steps": [
+    {
+      "id": "s1",
+      "edgeId": "e0",
+      "title": "AWS EventBridge scheduler triggers status update job (every 15 mins)",
+      "description": "An EventBridge rule triggers the Status Update Job at scheduled intervals (every 15 mins) to check and update applications and licences.",
+      "outcomes": [
+        {
+          "id": "success",
+          "label": "✓ Success",
+          "type": "happy",
+          "nextStepId": "s2",
+          "description": "su-cron triggered successfully"
+        },
+        {
+          "id": "eventbridge_error",
+          "label": "✗ EventBridge Error",
+          "type": "unhappy",
+          "nextStepId": "s1_abort",
+          "description": "Failed to trigger su-cron"
+        }
+      ]
+    },
+    {
+      "id": "s1_abort",
+      "edgeId": "e0",
+      "title": "EventBridge Trigger Failed",
+      "description": "The attempt to trigger the Status Update Job via EventBridge failed.",
+      "isRetryHandler": false,
+      "outcomes": [
+        {
+          "id": "Scheduler_Failed",
+          "label": "✓ Scheduler Failed",
+          "type": "terminal",
+          "nextStepId": null,
+          "description": "Scheduler Failed"
+        }
+      ]
+    },
+    {
+      "id": "s2",
+      "edgeId": "e24",
+      "title": "licence-service gets the latest APIs configured for status updates from Onboarding Portal",
+      "description": "licence-service gets the latest list of agency URLs configured for status updates from the Onboarding Portal.",
+      "outcomes": [
+        {
+          "id": "success",
+          "label": "✓ Success",
+          "type": "happy",
+          "nextStepId": "s3",
+          "description": "su-cron triggered successfully"
+        },
+        {
+          "id": "op_error",
+          "label": "✗ Error getting OP configs",
+          "type": "unhappy",
+          "nextStepId": "s2_abort",
+          "description": "Failed to read from dynamoDB"
+        }
+      ]
+    },
+    {
+      "id": "s2_abort",
+      "edgeId": "e24",
+      "title": "OP Config Read Failed",
+      "description": "The attempt to read the latest configs from Onboarding Portal failed.",
+      "isRetryHandler": false,
+      "outcomes": [
+        {
+          "id": "OP_Failed",
+          "label": "✓ Failed to read from OP",
+          "type": "terminal",
+          "nextStepId": null,
+          "description": "Status Update Failed, SU-cron terminates"
+        }
+      ]
+    },
+    {
+      "id": "s3",
+      "edgeId": "e2",
+      "title": "SU-cron, reads the state of status-update run for each agency URL",
+      "description": "SU-cron reads from DynamoDB to get the current state of status-update runs for each agency URL to decide if it should continue the run or skip.",
+      "outcomes": [
+        {
+          "id": "success",
+          "label": "✓ Success",
+          "type": "happy",
+          "nextStepId": "s4",
+          "description": "su-cron triggered successfully"
+        },
+        {
+          "id": "dynamodb_error",
+          "label": "✗ Error reading from dynamoDB",
+          "type": "unhappy",
+          "nextStepId": "s3_abort",
+          "description": "Failed to read from dynamoDB"
+        }
+      ]
+    },
+    {
+      "id": "s3_abort",
+      "edgeId": "e2",
+      "title": "DynamoDB Read Failed",
+      "description": "The attempt to read the status-update run state from DynamoDB failed.",
+      "isRetryHandler": false,
+      "outcomes": [
+        {
+          "id": "DynamoDB_Failed",
+          "label": "✓ Failed to read from DynamoDB",
+          "type": "terminal",
+          "nextStepId": null,
+          "description": "Status Update Failed, SU-cron terminates"
+        }
+      ]
+    },
+    {
+      "id": "s4",
+      "edgeId": "e3",
+      "title": "SU-cron, makes apex request to get status updates",
+      "description": "SU-cron makes a request to the Apex API to fetch the latest status updates for applications and licences for a particular URL.",
+      "outcomes": [
+        {
+          "id": "success",
+          "label": "✓ Success",
+          "type": "happy",
+          "nextStepId": "s5",
+          "description": "Apex request successful"
+        },
+        {
+          "id": "apex_bad_request_error",
+          "label": "✗ Apex: Bad request",
+          "type": "unhappy",
+          "nextStepId": "s4_abort",
+          "description": "Apex request failed due to bad request"
+        }
+      ]
+    },
+    {
+      "id": "s4_abort",
+      "edgeId": "e1",
+      "title": "SU-cron, writes status update failure to DynamoDB",
+      "description": "SU-cron writes the status update failure information for the URL back to DynamoDB for tracking during the next run.",
+      "isRetryHandler": false,
+      "outcomes": [
+        {
+          "id": "next_apex_request_for_next_url",
+          "label": "✓ SU-cron calls apex for next URL",
+          "type": "happy",
+          "nextStepId": "s4",
+          "description": "Status Update Failed for the particular URL, moving to next URL"
+        },
+        {
+          "id": "no_more_urls",
+          "label": "✓ SU-cron has already called apex for all the URLs listed",
+          "type": "terminal",
+          "nextStepId": null,
+          "description": "Status Update ends with dynamoDB updated for failures and success."
+        }
+      ]
+    },
+    {
+      "id": "s5",
+      "edgeId": "e4",
+      "title": "Apex returns status updates to SU-cron",
+      "description": "Apex API responds to SU-cron's request with the latest status updates for applications and licences for a particular URL.",
+      "outcomes": [
+        {
+          "id": "success",
+          "label": "✓ Success",
+          "type": "happy",
+          "nextStepId": "s6",
+          "description": "Apex response received successfully"
+        },
+        {
+          "id": "apex_error",
+          "label": "✗ Apex request timed out",
+          "type": "unhappy",
+          "nextStepId": "s4_abort",
+          "description": "Apex request failed due to timeout"
+        }
+      ]
+    },
+    {
+      "id": "s6",
+      "edgeId": "e5",
+      "title": "SU-cron pushes status updates to SQS FIFO queue",
+      "description": "SU-cron pushes the received status updates from Apex after chunking into 200 applications/licences in each message and feeding the SQS FIFO queue.",
+      "outcomes": [
+        {
+          "id": "success",
+          "label": "✓ Success",
+          "type": "happy",
+          "nextStepId": "s7",
+          "description": "SQS FIFO push successful"
+        },
+        {
+          "id": "sqs_error",
+          "label": "✗ SQS FIFO push failed",
+          "type": "unhappy",
+          "nextStepId": "s4_abort",
+          "description": "Failed to push to SQS FIFO"
+        }
+      ]
+    },
+    {
+      "id": "s7",
+      "edgeId": "e1",
+      "title": "SU-cron, writes status update success to DynamoDB",
+      "description": "SU-cron writes the status update success information for the URL back to DynamoDB for tracking during the next run.",
+      "isRetryHandler": false,
+      "outcomes": [
+        {
+          "id": "next_apex_request_for_next_url",
+          "label": "✓ SU-cron calls apex for next URL",
+          "type": "happy",
+          "nextStepId": "s4",
+          "description": "Status Update Successful for the particular URL, moving to next URL"
+        },
+        {
+          "id": "no_more_urls",
+          "label": "✓ SU-cron has already called apex for all the URLs listed",
+          "type": "terminal",
+          "nextStepId": null,
+          "description": "Status Update ends with dynamoDB updated for failures and success."
+        },
+        {
+          "id": "move_to_sqs_processing",
+          "label": "✓ Move to SQS Processing via licence-service",
+          "type": "happy",
+          "nextStepId": "s8",
+          "description": "All URLs processed, moving to SQS Processing via licence-service"
+        }
+      ]
+    },
+    {
+      "id": "s8",
+      "edgeId": "e6",
+      "title": "licence-service polls SQS FIFO queue",
+      "description": "licence-service polls the SQS FIFO queue for new status update messages to process and update the corresponding applications and licences in its database.",
+      "outcomes": [
+        {
+          "id": "success",
+          "label": "✓ Success",
+          "type": "happy",
+          "nextStepId": "s9",
+          "description": "licence-service polling successful"
+        }
+      ]
+    },
+    {
+      "id": "s9",
+      "edgeId": "e7",
+      "title": "licence-service processes each status update message and updates DB",
+      "description": "licence-service processes each message retrieved from the SQS FIFO queue, updating the status of applications and licences in its database accordingly.",
+      "outcomes": [
+        {
+          "id": "success",
+          "label": "✓ Success",
+          "type": "happy",
+          "nextStepId": null,
+          "description": "All applications/licences updated successfully"
+        },
+        {
+          "id": "partial_error",
+          "label": "✗ Few applications/licences failed to update",
+          "type": "unhappy",
+          "nextStepId": "s10",
+          "description": "Apart from the specific application/licence failures, all others updated successfully"
+        }
+      ]
+    },
+    {
+      "id": "s10",
+      "edgeId": "e7",
+      "title": "licence-service updates DB for ANS (Agency Notification System) for the failed updates",
+      "description": "licence-service logs the failed application/licence updates into the Agency Notification System (ANS) within its database for further investigation and action by the concerned agency.",
+      "outcomes": [
+        {
+          "id": "partial-success",
+          "label": "✓ Partial Success",
+          "type": "happy",
+          "nextStepId": null,
+          "description": "All or partial applications/licences updated successfully with failed ones logged in ANS"
+        }
+      ]
+    }
+  ]
 }

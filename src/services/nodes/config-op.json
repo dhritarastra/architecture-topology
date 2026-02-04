@@ -1,0 +1,10 @@
+[
+  {
+    "id": "onboarding-portal",
+    "label": "onboarding-portal",
+    "repo": null,
+    "type": "config",
+    "layer": "application",
+    "tier": "backend"
+  }
+]

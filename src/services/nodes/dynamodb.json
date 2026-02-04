@@ -1,9 +1,9 @@
 [
   {
-    "id": "DYNAMODB",
-    "label": "DYNAMODB",
+    "id": "dynamo-db",
+    "label": "su-dynamo-db",
     "repo": "molb-gcc-infra",
-    "type": "dynamodb",
+    "type": "dynamo-db",
     "schema": {
       "request": {
         "id": "string",

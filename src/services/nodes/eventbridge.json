@@ -1,7 +1,7 @@
 [
   {
-    "id": "SU-EventBridge",
-    "label": "SU-EventBridge",
+    "id": "su-eventbridge",
+    "label": "su-eventbridge",
     "repo": "molb-gcc-infra",
     "type": "eventbridge",
     "schema": {

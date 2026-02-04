@@ -1,15 +1,15 @@
 {
-  "id": "f1",
+  "id": "f3",
   "label": "Payment Flow",
   "nodes": [
     "MoP",
-    "DASHBOARD-BACKEND",
-    "DASHBOARD-WEB",
-    "PAYMENT-WEB",
-    "PAYMENT-SERVICE",
-    "STRIPE",
-    "LPA",
-    "LPS",
+    "dashboard-backend",
+    "dashboard-web",
+    "payment-web",
+    "payment-service",
+    "stripe",
+    "licence-backend",
+    "licence-service",
     "DB"
   ],
   "edges": [
@@ -43,11 +43,11 @@
     {
       "id": "s2",
       "edgeId": "e10",
-      "title": "DASHBOARD-WEB calls DASHBOAED-BACKEND",
+      "title": "dashboard-web calls DASHBOAED-BACKEND",
       "nodeSchemas": {
-        "DASHBOARD-WEB": {
+        "dashboard-web": {
           "request": {
-            "Description": "Requests DASHBOARD-BACKEND to create payment request"
+            "Description": "Requests dashboard-backend to create payment request"
           }
         }
       }
@@ -55,11 +55,11 @@
     {
       "id": "s3",
       "edgeId": "e17",
-      "title": "DASHBOARD-BACKEND calls Payment Service",
+      "title": "dashboard-backend calls Payment Service",
       "nodeSchemas": {
-        "DASHBOARD-BACKEND": {
+        "dashboard-backend": {
           "request": {
-            "Description": "Requests PAYMENT-SERVICE to create payment reference with metadata in JWE String"
+            "Description": "Requests payment-service to create payment reference with metadata in JWE String"
           }
         }
       }
@@ -67,11 +67,11 @@
     {
       "id": "s4",
       "edgeId": "e18",
-      "title": "Payment Service calls Stripe (first time)",
+      "title": "Payment Service calls stripe (first time)",
       "nodeSchemas": {
-        "PAYMENT-SERVICE": {
+        "payment-service": {
           "request": {
-            "Description": "Request to create Stripe customer and return JWE String response"
+            "Description": "Request to create stripe customer and return JWE String response"
           }
         }
       }
@@ -79,11 +79,11 @@
     {
       "id": "s5",
       "edgeId": "e19",
-      "title": "STRIPE responds to Payment Service (first time)",
+      "title": "stripe responds to Payment Service (first time)",
       "nodeSchemas": {
-        "STRIPE": {
+        "stripe": {
           "response": {
-            "Description": "STRIPE responds with JWE String to be set in the cookie post creation of Stripe customer"
+            "Description": "stripe responds with JWE String to be set in the cookie post creation of stripe customer"
           }
         }
       }
@@ -91,11 +91,11 @@
     {
       "id": "s6",
       "edgeId": "e20",
-      "title": "Payment Service responds to DASHBOARD-BACKEND (first time)",
+      "title": "Payment Service responds to dashboard-backend (first time)",
       "nodeSchemas": {
-        "PAYMENT-SERVICE": {
+        "payment-service": {
           "response": {
-            "Description": "JWE String response to be set in the cookie post creation of Stripe customer"
+            "Description": "JWE String response to be set in the cookie post creation of stripe customer"
           }
         }
       }
@@ -103,11 +103,11 @@
     {
       "id": "s7",
       "edgeId": "e11",
-      "title": "DASHBOARD-BACKEND responds to DASHBOARD-WEB",
+      "title": "dashboard-backend responds to dashboard-web",
       "nodeSchemas": {
-        "DASHBOARD-BACKEND": {
+        "dashboard-backend": {
           "response": {
-            "Description": "DASHBOARD_BACKEND sends the JWE String response to DASHBOARD-WEB to be set in the cookie for redirect"
+            "Description": "DASHBOARD_BACKEND sends the JWE String response to dashboard-web to be set in the cookie for redirect"
           }
         }
       }
@@ -115,11 +115,11 @@
     {
       "id": "s8",
       "edgeId": "e12",
-      "title": "DASHBOARD-WEB redirects to PAYMENT-WEB",
+      "title": "dashboard-web redirects to payment-web",
       "nodeSchemas": {
-        "DASHBOARD-WEB": {
+        "dashboard-web": {
           "request": {
-            "Description": "DASHBOARD-WEB redirects to PAYMENT-WEB with set cookie"
+            "Description": "dashboard-web redirects to payment-web with set cookie"
           }
         }
       }
@@ -127,11 +127,11 @@
     {
       "id": "s9",
       "edgeId": "e13",
-      "title": "PAYMENT-WEB calls PAYMENT-SERVICE",
+      "title": "payment-web calls payment-service",
       "nodeSchemas": {
-        "PAYMENT-WEB": {
+        "payment-web": {
           "request": {
-            "Description": "PAYMENT-WEB sends tokenized stripe payment method to PAYMENT-SERVICE to initiate payment."
+            "Description": "payment-web sends tokenized stripe payment method to payment-service to initiate payment."
           }
         }
       }
@@ -139,11 +139,11 @@
     {
       "id": "s10",
       "edgeId": "e18",
-      "title": "PAYMENT-SERVICE calls STRIPE (second time)",
+      "title": "payment-service calls stripe (second time)",
       "nodeSchemas": {
-        "PAYMENT-SERVICE": {
+        "payment-service": {
           "request": {
-            "Description": "PAYMENT-Service calls Stripe to create payment intent in Agency stripe account with payment method and domain reference data."
+            "Description": "payment-service calls stripe to create payment intent in Agency stripe account with payment method and domain reference data."
           }
         }
       }
@@ -151,11 +151,11 @@
     {
       "id": "s11",
       "edgeId": "e19",
-      "title": "STRIPE responds to PAYMENT-SERVICE (second time)",
+      "title": "stripe responds to payment-service (second time)",
       "nodeSchemas": {
-        "STRIPE": {
+        "stripe": {
           "response": {
-            "Description": "Stripe responds to PAYMENT-SERVICE with the outcome of the payment."
+            "Description": "stripe responds to payment-service with the outcome of the payment."
           }
         }
       }
@@ -163,11 +163,11 @@
     {
       "id": "s12",
       "edgeId": "e23",
-      "title": "PAYMENT-SERVICE calls DASHBOARD-BACKEND (second time)",
+      "title": "payment-service calls dashboard-backend (second time)",
       "nodeSchemas": {
-        "PAYMENT-SERVICE": {
+        "payment-service": {
           "request": {
-            "Description": "PAYMENT-SERVICE calls DASHBOARD-BACKEND to notify the domain of the outcome of the payment processing."
+            "Description": "payment-service calls dashboard-backend to notify the domain of the outcome of the payment processing."
           }
         }
       }
@@ -175,14 +175,14 @@
     {
       "id": "s13",
       "edgeId": "e21",
-      "title": "DASHBOARD-BACKEND calls LPA",
+      "title": "dashboard-backend calls licence-backend",
       "unhappy": [
         { "edgeId": "u1_5XX", "title": "Backend Error" }
       ],
       "nodeSchemas": {
-        "DASHBOARD-BACKEND": {
+        "dashboard-backend": {
           "request": {
-            "Description": "DASHBOARD-BACKEND makes payment callback to LPA",
+            "Description": "dashboard-backend makes payment callback to licence-backend",
             "URI": "/payments/callback",
             "dummy-payload": {
               "domainReferences": [
@@ -259,14 +259,14 @@
     {
       "id": "s14",
       "edgeId": "e22",
-      "title": "LPA calls LPS",
+      "title": "licence-backend calls licence-service",
       "unhappy": [
         { "edgeId": "u4_4XX", "title": "Bad Request / Validation Failed" }
       ],
       "nodeSchemas": {
-        "LPA": {
+        "licence-backend": {
           "request": {
-            "Description": "LPA calls LPS in case of successful payment to update licence/application status accordingly",
+            "Description": "licence-backend calls licence-service in case of successful payment to update licence/application status accordingly",
             "URI": "/applications/{applicationId}/submitV2",
             "dummy-payload": {
               "paymentInfo": {
@@ -333,11 +333,11 @@
     {
       "id": "s15",
       "edgeId": "e7",
-      "title": "LPS writes into DB",
+      "title": "licence-service writes into DB",
       "nodeSchemas": {
-        "PAYMENT-WEB": {
+        "payment-web": {
           "request": {
-            "Description": "LPS updates the database with the payment and status update information",
+            "Description": "licence-service updates the database with the payment and status update information",
             "Tables updated": "Application, Statemachine"
           }
         }
