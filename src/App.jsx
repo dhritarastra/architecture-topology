@@ -288,28 +288,6 @@ const stylesheet = [
         },
     },
 
-    // HEALTH STATUS STYLES
-    {
-        selector: "node.health-healthy",
-        style: {
-            "border-color": "#16a34a",
-            "border-width": 4,
-        },
-    },
-    {
-        selector: "node.health-degraded",
-        style: {
-            "border-color": "#eab308",
-            "border-width": 4,
-        },
-    },
-    {
-        selector: "node.health-critical",
-        style: {
-            "border-color": "#dc2626",
-            "border-width": 4,
-        },
-    },
 
     // FILTERED (hidden nodes)
     {
@@ -374,10 +352,8 @@ export default function App() {
     const [stateHistory, setStateHistory] = useState([]);
 
     // NEW: Infrastructure view enhancements
-    const [showMetrics, setShowMetrics] = useState(false);
     const [infraDetailTab, setInfraDetailTab] = useState("overview");
     const [filterLayer, setFilterLayer] = useState("all");
-    const [filterHealth, setFilterHealth] = useState("all");
 
     // PHASE 4: Search, Export, Layout Options
     const [searchQuery, setSearchQuery] = useState("");
@@ -817,7 +793,7 @@ export default function App() {
     }, [viewMode, selectedFlowId, currentStepIndex, showUnhappy]);
 
     /* ------------------------------------------
-       APPLY HEALTH STYLING AND FILTERS (Infrastructure mode)
+       APPLY LAYER FILTERS (Infrastructure mode)
     ------------------------------------------- */
     useEffect(() => {
         const cy = cyRef.current;
@@ -825,60 +801,34 @@ export default function App() {
 
         // Only apply in infrastructure mode
         if (viewMode !== "infra") {
-            // Remove all health and filter classes in other modes
-            cy.nodes().removeClass("health-healthy health-degraded health-critical filtered-out");
+            cy.nodes().removeClass("filtered-out");
             cy.edges().removeClass("filtered-out");
             return;
         }
 
         // Remove existing classes
-        cy.nodes().removeClass("health-healthy health-degraded health-critical filtered-out");
+        cy.nodes().removeClass("filtered-out");
         cy.edges().removeClass("filtered-out");
 
-        // Apply health-based styling if metrics overlay is enabled
-        if (showMetrics) {
+        // Apply layer filter
+        if (filterLayer !== "all") {
             cy.nodes().forEach(node => {
-                const health = node.data("metrics")?.health;
-                if (health === "healthy") {
-                    node.addClass("health-healthy");
-                } else if (health === "degraded") {
-                    node.addClass("health-degraded");
-                } else if (health === "critical") {
-                    node.addClass("health-critical");
+                if (node.data("layer") !== filterLayer) {
+                    node.addClass("filtered-out");
+                }
+            });
+
+            // Filter edges connected to filtered nodes
+            cy.edges().forEach(edge => {
+                const source = edge.source();
+                const target = edge.target();
+                if (source.hasClass("filtered-out") || target.hasClass("filtered-out")) {
+                    edge.addClass("filtered-out");
                 }
             });
         }
 
-        // Apply filters
-        const shouldFilterNode = (nodeData) => {
-            // Layer filter
-            if (filterLayer !== "all" && nodeData.layer !== filterLayer) {
-                return true;
-            }
-            // Health filter
-            if (filterHealth !== "all" && nodeData.metrics?.health !== filterHealth) {
-                return true;
-            }
-            return false;
-        };
-
-        // Filter nodes
-        cy.nodes().forEach(node => {
-            if (shouldFilterNode(node.data())) {
-                node.addClass("filtered-out");
-            }
-        });
-
-        // Filter edges connected to filtered nodes
-        cy.edges().forEach(edge => {
-            const source = edge.source();
-            const target = edge.target();
-            if (source.hasClass("filtered-out") || target.hasClass("filtered-out")) {
-                edge.addClass("filtered-out");
-            }
-        });
-
-    }, [viewMode, showMetrics, filterLayer, filterHealth]);
+    }, [viewMode, filterLayer]);
 
     // Find active flow (for API mode)
     const activeFlow = useMemo(() => {
@@ -1063,7 +1013,6 @@ export default function App() {
             stateHistory,
             searchQuery,
             filterLayer,
-            filterHealth,
             layoutAlgorithm,
             layoutOrientation
         };
@@ -1073,7 +1022,7 @@ export default function App() {
         link.download = `app-state-${new Date().toISOString()}.json`;
         link.href = URL.createObjectURL(blob);
         link.click();
-    }, [viewMode, selectedFlowId, currentStepIndex, flowPathHistory, flowState, stateHistory, searchQuery, filterLayer, filterHealth, layoutAlgorithm, layoutOrientation]);
+    }, [viewMode, selectedFlowId, currentStepIndex, flowPathHistory, flowState, stateHistory, searchQuery, filterLayer, layoutAlgorithm, layoutOrientation]);
 
     /* ------------------------------------------
        PHASE 4: KEYBOARD SHORTCUTS
@@ -1514,7 +1463,7 @@ export default function App() {
                     </div>
                 </div>
 
-                {/* Infrastructure view filters and metrics toggle */}
+                {/* Infrastructure view layer filter */}
                 {viewMode === "infra" && (
                     <div style={{
                         marginBottom: 12,
@@ -1523,21 +1472,7 @@ export default function App() {
                         borderRadius: 6,
                         border: "1px solid #e5e7eb"
                     }}>
-                        <div style={{marginBottom: 8}}>
-                            <label style={{display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, marginRight: 16}}>
-                                <input
-                                    type="checkbox"
-                                    checked={showMetrics}
-                                    onChange={(e) => setShowMetrics(e.target.checked)}
-                                />
-                                <strong>Show Health Borders</strong>
-                            </label>
-                            <span style={{fontSize: 11, color: "#6b7280"}}>
-                                (Green=Healthy, Yellow=Degraded, Red=Critical)
-                            </span>
-                        </div>
-
-                        <div style={{display: "flex", gap: 12, fontSize: 12}}>
+                        <div style={{display: "flex", gap: 12, fontSize: 12, alignItems: "center"}}>
                             <div>
                                 <label style={{marginRight: 6, fontWeight: 600}}>Layer:</label>
                                 <select
@@ -1558,31 +1493,9 @@ export default function App() {
                                 </select>
                             </div>
 
-                            <div>
-                                <label style={{marginRight: 6, fontWeight: 600}}>Health:</label>
-                                <select
-                                    value={filterHealth}
-                                    onChange={(e) => setFilterHealth(e.target.value)}
-                                    style={{
-                                        padding: "4px 8px",
-                                        borderRadius: 4,
-                                        border: "1px solid #d1d5db",
-                                        fontSize: 12
-                                    }}
-                                >
-                                    <option value="all">All Health States</option>
-                                    <option value="healthy">Healthy</option>
-                                    <option value="degraded">Degraded</option>
-                                    <option value="critical">Critical</option>
-                                </select>
-                            </div>
-
-                            {(filterLayer !== "all" || filterHealth !== "all") && (
+                            {filterLayer !== "all" && (
                                 <button
-                                    onClick={() => {
-                                        setFilterLayer("all");
-                                        setFilterHealth("all");
-                                    }}
+                                    onClick={() => setFilterLayer("all")}
                                     style={{
                                         padding: "4px 8px",
                                         background: "#fee2e2",
@@ -1594,7 +1507,7 @@ export default function App() {
                                         fontWeight: 600
                                     }}
                                 >
-                                    Clear Filters
+                                    Clear Filter
                                 </button>
                             )}
                         </div>
