@@ -1,0 +1,18 @@
+{
+  "id": "f5",
+  "label": "discrete",
+  "nodes": ["DB", "licence-service"],
+  "edges": ["e4"],
+  "nodeSchemas": {
+    "licence-service": {
+      "request": {
+        "licenceId": "string",
+        "includeAudit": "boolean"
+      },
+      "response": {
+        "status": "string",
+        "history": "array"
+      }
+    }
+  }
+}
