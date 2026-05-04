@@ -23,7 +23,8 @@
   { "id": "e21", "source": "dashboard-backend", "target": "licence-backend", "label": "request"},
   { "id": "e22", "source": "licence-backend", "target": "licence-service", "label": "request"},
   { "id": "e23", "source": "dashboard-backend", "target": "payment-service", "label": "request" },
-  { "id": "e24", "source": "onboarding-portal", "target": "licence-service", "label": "gets" },
+  { "id": "e24", "source": "onboarding-portal", "target": "status-update-job", "label": "gets" },
+  { "id": "e25", "source": "licence-backend", "target": "licence-service", "label": "jay wants this"},
 
 
 

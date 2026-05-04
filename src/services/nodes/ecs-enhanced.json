@@ -89,7 +89,7 @@
     },
     "dependencies": {
       "databases": ["DB"],
-      "queues": ["licence-queue"]
+      "queues": ["SQS_FIFO"]
     }
   },
   {

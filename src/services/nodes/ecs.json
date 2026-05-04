@@ -1,23 +1,8 @@
 [
   {
-    "id": "status-update-job",
-    "label": "status-update-job",
-    "repo": "molb-status-update-job",
-    "type": "ecs",
-    "schema": {
-      "request": {
-        "id": "string",
-        "timestamp": "string"
-      },
-      "response": {
-        "status": "string"
-      }
-    }
-  },
-  {
-    "id": "licence-service",
-    "label": "licence-service",
-    "repo": "molb-licence-service",
+    "id": "licence-backend",
+    "label": "licence-backend",
+    "repo": "molb-licence-backend",
     "type": "ecs",
     "schema": {
       "entity": {
@@ -27,10 +12,10 @@
     }
   },
   {
-    "id": "licence-backend",
-    "label": "licence-backend",
+    "id": "chai-backend",
+    "label": "chai-backend",
     "repo": "molb-licence-backend",
-    "type": "ecs",
+    "type": "rds",
     "schema": {
       "entity": {
         "id": "string",

@@ -1,8 +1,8 @@
 {
   "id": "f2",
   "label": "Status Update Flow",
-  "nodes": ["su-eventbridge","apex","dynamo-db","status-update-job", "SQS_FIFO", "licence-service", "DB"],
-  "edges": ["e0", "e2", "e1", "e3", "e4", "e5", "e6", "e8", "e7", "e24", "e7"],
+  "nodes": ["su-eventbridge","apex","dynamo-db","status-update-job", "SQS_FIFO", "licence-service", "DB", "onboarding-portal"],
+  "edges": ["e0", "e2", "e1", "e3", "e4", "e5", "e6", "e7", "e24", "e7"],
   "nodeSchemas": {
     "status-update-job": {
       "request": {

@@ -8,6 +8,8 @@
       "description": "EventBridge event for Status Update service",
       "schedule-name": "<ENV>-status-update-job",
       "schedule-expression": "20,50 * * * ? *"
-    }
+    },
+    "layer": "application",
+    "tier": "backend"
   }
 ]
